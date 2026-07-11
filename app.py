@@ -2,36 +2,159 @@ import streamlit as st
 import json
 import os
 import pandas as pd
-import io
 from datetime import datetime
-
-# --- REPORTLAB IMPORTS FOR PROFESSIONAL PDF GENERATION ---
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
+import io
+# Import ReportLab for highly customized PDF generation
 from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
 
-# ---------- PRE-REQUISITES & CONFIG ----------
+# ---------- CONFIGURATION & DATA CONSTANTS ----------
 FILE_NAME = "students.json"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "1234"
-SUBJECTS = [
-    "Science", "Fine Arts", "Life Skills", "Mathematics", 
-    "Computer Literacy", "Foreign Language", "English Language Arts", 
-    "History and Geography", "Physical Education/Health"
-]
-TOTAL_MARKS = len(SUBJECTS) * 100
+# The subjects utilized by this application
+SUBJECTS = ["English", "Urdu", "Math", "Science", "Sindhi", "Islamiyat", "Social Studies"]
+TOTAL_MARKS = 700
 
-st.set_page_config(page_title="Elite Student Portal", page_icon="💎", layout="wide")
+# ---------- PREMIUM UI CONFIGURATION (CSS INJECTION) ----------
+st.set_page_config(page_title="Anderson Family Homeschool Portal", page_icon="📘", layout="wide")
 
-# ---------- DATA STORAGE ENGINE ----------
+# Custom CSS to override Streamlit defaults and inject Glassmorphism, Neomorphism, and Premium Typography
+st.markdown("""
+<style>
+    /* Import premium Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Poppins:wght@400;600;700&display=swap');
+    
+    /* Global App Styling - Dark Mode Premium Background */
+    .stApp {
+        background: linear-gradient(145deg, #1e1e1e 0%, #2a2a2a 100%);
+        color: #f5f0e6; /* Beige-cream for readability */
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Glassmorphism Sidebar */
+    [data-testid="stSidebar"] {
+        background: rgba(122, 76, 52, 0.15) !important;
+        backdrop-filter: blur(16px) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 4px 0 25px rgba(0,0,0,0.3);
+    }
+    [data-testid="stSidebar"] * {
+        color: #f5f0e6 !important;
+    }
+
+    /* Premium Cards / Containers */
+    .premium-glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        transition: transform 0.2s ease;
+    }
+
+    /* Custom Inputs (Redefining Streamlit widgets) */
+    div[data-testid="stTextInput"] label {
+        color: #c83c2f !important; /* Burnt Orange/Red */
+        font-weight: 600;
+        font-family: 'Poppins', sans-serif;
+    }
+    div[data-testid="stTextInput"] input {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 10px !important;
+        color: white !important;
+        backdrop-filter: blur(5px) !important;
+        font-family: 'Inter', sans-serif;
+    }
+    div[data-testid="stTextInput"] input:focus {
+        border-color: #c83c2f !important;
+        box-shadow: 0 0 15px rgba(200, 60, 47, 0.3) !important;
+    }
+
+    /* Premium Button Styling (Hover effects, gradients) */
+    div.stButton > button {
+        background: linear-gradient(135deg, #7a4c34 0%, #a66a40 100%) !important;
+        color: white !important;
+        border-radius: 30px !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        padding: 10px 24px !important;
+        font-weight: 600 !important;
+        font-family: 'Poppins', sans-serif !important;
+        letter-spacing: 1px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 15px rgba(122, 76, 52, 0.5) !important;
+        width: 100%;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-3px) scale(1.02) !important;
+        box-shadow: 0 8px 25px rgba(122, 76, 52, 0.8) !important;
+        border-color: #ffffff !important;
+    }
+
+    /* Admin Dataframe Styling (Neomorphism Table) */
+    .stDataFrame {
+        background: transparent !important;
+    }
+    .stDataFrame table {
+        border-radius: 12px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+    }
+    .stDataFrame th {
+        background: #7a4c34 !important;
+        color: #ffffff !important;
+        font-family: 'Poppins', sans-serif !important;
+    }
+    .stDataFrame td {
+        color: #e0d7c8 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+
+    /* Custom Alerts Implementation */
+    .premium-alert-success {
+        background: rgba(46, 204, 113, 0.15);
+        border-left: 6px solid #2ecc71;
+        padding: 15px;
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
+        color: #d1f2eb;
+        font-family: 'Inter', sans-serif;
+        margin-bottom: 15px;
+    }
+    .premium-alert-error {
+        background: rgba(231, 76, 60, 0.15);
+        border-left: 6px solid #e74c3c;
+        padding: 15px;
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
+        color: #fadbd8;
+        font-family: 'Inter', sans-serif;
+        margin-bottom: 15px;
+    }
+    .premium-alert-info {
+        background: rgba(52, 152, 219, 0.15);
+        border-left: 6px solid #3498db;
+        padding: 15px;
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
+        color: #d6eaf8;
+        font-family: 'Inter', sans-serif;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ---------- HELPER FUNCTIONS ----------
 def load_data():
     if os.path.exists(FILE_NAME):
         try:
-            with open(FILE_NAME, "r") as file: 
+            with open(FILE_NAME, "r") as file:
                 return json.load(file)
-        except: 
+        except (json.JSONDecodeError, IOError):
             return {}
     return {}
 
@@ -39,489 +162,419 @@ def save_data(data):
     with open(FILE_NAME, "w") as file:
         json.dump(data, file, indent=4)
 
-def seed_sample_data():
-    sample_data = {
-        "1001": {
-            "name": "Zain Ahmed",
-            "class": "Grade 10",
-            "session": "2026-2027",
-            "marks": {"Science": 95, "Fine Arts": 88, "Life Skills": 92, "Mathematics": 98, "Computer Literacy": 96, "Foreign Language": 85, "English Language Arts": 91, "History and Geography": 89, "Physical Education/Health": 94},
-            "date": str(datetime.now().date())
-        },
-        "1002": {
-            "name": "Ayesha Khan",
-            "class": "Grade 10",
-            "session": "2026-2027",
-            "marks": {"Science": 82, "Fine Arts": 94, "Life Skills": 85, "Mathematics": 76, "Computer Literacy": 89, "Foreign Language": 92, "English Language Arts": 88, "History and Geography": 84, "Physical Education/Health": 90},
-            "date": str(datetime.now().date())
-        }
-    }
-    save_data(sample_data)
-    st.rerun()
+def get_grade_gpa(percentage):
+    """Calculates letter grade, GPA, and percentage range based on the provided image's Grading Key."""
+    if percentage >= 93: return "A", "4.0/4.0", "93% to 100%"
+    elif percentage >= 90: return "A-", "3.7/4.0", "90% to 92%"
+    elif percentage >= 87: return "B+", "3.3/4.0", "87% to 89%"
+    elif percentage >= 83: return "B", "3.0/4.0", "83% to 86%"
+    elif percentage >= 80: return "B-", "2.7/4.0", "80% to 82%"
+    elif percentage >= 77: return "C+", "2.3/4.0", "77% to 79%"
+    elif percentage >= 73: return "C", "2.0/4.0", "73% to 76%"
+    elif percentage >= 70: return "C-", "1.7/4.0", "70% to 72%"
+    elif percentage >= 67: return "D+", "1.3/4.0", "67% to 69%"
+    elif percentage >= 63: return "D", "1.0/4.0", "63% to 66%"
+    elif percentage >= 60: return "D-", "0.7/4.0", "60% to 62%"
+    else: return "F", "0.0/4.0", "0% to 59%"
 
-# ---------- ADVANCED CANVA-STYLE GRADING ENGINE ----------
-def get_detailed_grade(score):
-    """Calculates letter grade, GPA, and remarks based on standard premium criteria."""
-    if score >= 93: return "A", "4.0/4.0", "Excellent performance"
-    elif score >= 90: return "A-", "3.7/4.0", "Outstanding results"
-    elif score >= 87: return "B+", "3.3/4.0", "Very good work"
-    elif score >= 83: return "B", "3.0/4.0", "Good understanding"
-    elif score >= 80: return "B-", "2.7/4.0", "Satisfactory progress"
-    elif score >= 77: return "C+", "2.3/4.0", "Fair performance"
-    elif score >= 70: return "C", "1.7/4.0", "Developing skills"
-    elif score >= 67: return "D+", "1.3/4.0", "Needs improvement"
-    elif score >= 63: return "D", "1.0/4.0", "Passing status"
-    elif score >= 60: return "D-", "0.7/4.0", "Marginal pass"
-    else: return "F", "0.0/4.0", "Failing status"
+def get_teacher_remarks(percentage):
+    """Generates remarks for the PDF."""
+    if percentage >= 90: return "Excellent"
+    elif percentage >= 80: return "Good"
+    elif percentage >= 70: return "Satisfactory"
+    elif percentage >= 60: return "Needs Improvement"
+    else: return "Requires Attention"
 
-def get_ui_badge(percentage):
-    if percentage >= 90: return "🌟 Grade A", "#00FF88"
-    elif percentage >= 80: return "✨ Grade B", "#00D2FF"
-    elif percentage >= 70: return "✅ Grade C", "#FFD700"
-    elif percentage >= 60: return "🆗 Grade D", "#FFA500"
-    else: return "❌ Fail", "#FF4B4B"
-
-# ---------- PREMIUM CANVA REPORT CARD PDF GENERATOR ----------
-class PremiumReportCanvas(canvas.Canvas):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-    def draw_background(self):
-        self.saveState()
-        self.setFillColor(colors.HexColor("#FDFBF7"))
-        self.rect(0, 0, 612, 792, fill=True, stroke=False)
-        self.setFillColor(colors.HexColor("#D9CEBF"))
-        self.circle(40, 740, 60, fill=True, stroke=False)
-        self.circle(580, 680, 45, fill=True, stroke=False)
-        self.setStrokeColor(colors.HexColor("#B04A4A"))
-        self.setLineWidth(3)
-        self.circle(110, 660, 28, fill=False, stroke=True)
-        self.circle(460, 610, 20, fill=False, stroke=True)
-        self.setFillColor(colors.HexColor("#7A533E"))
-        self.rect(36, 30, 540, 45, fill=True, stroke=False)
-        self.restoreState()
-
-def generate_pdf(student_id, student_info):
+# ---------- PREMIUM PDF GENERATION (REPORTLAB) ----------
+def generate_pdf_report(roll_number, student_name, student_class, marks_dict, date_today):
+    """
+    Generates a byte-stream PDF mirroring the provided Canva template exactly.
+    Returns a BytesIO object ready for download.
+    """
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
-    styles = getSampleStyleSheet()
-    
-    title_style = ParagraphStyle('DocTitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=26, textColor=colors.white, alignment=1, spaceAfter=4)
-    subtitle_style = ParagraphStyle('DocSubtitle', parent=styles['Normal'], fontName='Helvetica', fontSize=13, textColor=colors.HexColor("#EAE2D5"), alignment=1)
-    field_label_style = ParagraphStyle('FieldLabel', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#9E3B3B"))
-    field_val_style = ParagraphStyle('FieldVal', parent=styles['Normal'], fontName='Helvetica', fontSize=11, textColor=colors.HexColor("#2C2520"))
-    th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
-    td_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontName='Helvetica', fontSize=9, textColor=colors.HexColor("#3D332D"))
-    key_style = ParagraphStyle('KeyText', parent=styles['Normal'], fontName='Helvetica', fontSize=8, textColor=colors.HexColor("#614E43"), alignment=1)
-    quarter_style = ParagraphStyle('QuarterText', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#B04A4A"), alignment=1)
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
 
-    story = []
-    banner_data = [[Paragraph("Progress Report", title_style)], [Paragraph("Anderson Family Homeschool", subtitle_style)]]
-    banner_table = Table(banner_data, colWidths=[540])
-    banner_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#7A533E")),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,0), 16),
-        ('BOTTOMPADDING', (0,-1), (-1,-1), 16),
-    ]))
-    story.append(banner_table)
-    story.append(Spacer(1, 25))
+    # COLORS (Derived from the provided Canva image)
+    brown_dark = colors.HexColor('#604227')
+    brown_brand = colors.HexColor('#7a4c34')
+    red_brand = colors.HexColor('#c83c2f')
+    cream_bg = colors.HexColor('#f5f0e6')
+    cream_light = colors.HexColor('#eae2d7')
     
-    meta_data = [
-        [Paragraph("Student Name:", field_label_style), Paragraph("School Year:", field_label_style)],
-        [Paragraph(student_info['name'], field_val_style), Paragraph(student_info.get('session', '2026-2027'), field_val_style)],
-        [Spacer(1, 10), Spacer(1, 10)],
-        [Paragraph("Grade / Class:", field_label_style), Paragraph("Teacher:", field_label_style)],
-        [Paragraph(student_info['class'], field_val_style), Paragraph("Parent / Educator", field_val_style)]
-    ]
-    meta_table = Table(meta_data, colWidths=[270, 270])
-    meta_table.setStyle(TableStyle([
-        ('LINEBELOW', (0,1), (0,1), 1, colors.HexColor("#D4C5B3")),
-        ('LINEBELOW', (1,1), (1,1), 1, colors.HexColor("#D4C5B3")),
-        ('LINEBELOW', (0,4), (0,4), 1, colors.HexColor("#D4C5B3")),
-        ('LINEBELOW', (1,4), (1,4), 1, colors.HexColor("#D4C5B3")),
-        ('BOTTOMPADDING', (0,1), (-1,1), 4),
-        ('BOTTOMPADDING', (0,4), (-1,4), 4),
-    ]))
-    story.append(meta_table)
-    story.append(Spacer(1, 25))
+    # 1. BACKGROUND & DECORATIVE CIRCLES (Canva-style aesthetic)
+    c.setFillColor(cream_bg)
+    c.rect(0, 0, width, height, fill=1, stroke=0)
     
-    table_content = [[Paragraph("Course Title", th_style), Paragraph("No. of Units", th_style), Paragraph("Course Grade", th_style), Paragraph("Teacher's Remarks", th_style)]]
-    for idx, subject in enumerate(SUBJECTS):
-        score = student_info['marks'].get(subject, 0)
-        let_grade, gpa, remark = get_detailed_grade(score)
-        table_content.append([Paragraph(subject, td_style), Paragraph("1.0", td_style), Paragraph(f"{let_grade} ({score}%)", td_style), Paragraph(remark, td_style)])
+    # Draw background decorative overlapping circles
+    c.setFillColor(colors.HexColor('#e0d7c8'))
+    c.circle(70, height - 60, 50, stroke=0, fill=1)
+    c.setFillColor(colors.HexColor('#d4c8b6'))
+    c.circle(width - 70, height - 150, 80, stroke=0, fill=1)
+    c.setFillColor(colors.HexColor('#c83c2f')) # Red semi-transparent overlay
+    c.setFillAlpha(0.1)
+    c.circle(145, height - 80, 45, stroke=0, fill=1)
+    c.setFillAlpha(1)
+
+    # 2. HEADER BOX (Banner)
+    header_x = (width - 250) / 2
+    header_y = height - 90
+    c.setFillColor(brown_brand)
+    c.roundRect(header_x, header_y, 250, 55, 10, fill=1, stroke=0)
+    
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 22)
+    c.drawCentredString(width/2, height - 65, "Progress Report")
+    c.setFillColor(brown_brand)
+    c.setFont("Helvetica", 12)
+    c.drawCentredString(width/2, height - 120, "Anderson Family Homeschool")
+
+    # 3. STUDENT INFO FORM SECTION
+    c.setStrokeColor(brown_brand)
+    c.setLineWidth(1.5)
+    x_margin = 50
+    
+    # Labels (Red)
+    c.setFillColor(red_brand)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(x_margin, height - 160, "Student Name:")
+    c.drawString(x_margin, height - 195, "Grade:")
+    c.drawString(x_margin + 300, height - 160, "School Year:")
+    c.drawString(x_margin + 300, height - 195, "Teacher:")
+    
+    # Underlines (In case fields are empty)
+    c.setStrokeColor(colors.grey)
+    c.setLineWidth(0.8)
+    c.line(x_margin, height - 170, x_margin + 250, height - 170)
+    c.line(x_margin, height - 205, x_margin + 250, height - 205)
+    c.line(x_margin + 300, height - 170, x_margin + 520, height - 170)
+    c.line(x_margin + 300, height - 205, x_margin + 520, height - 205)
+    
+    # Fill Student Info (Black/White text)
+    c.setFillColor(brown_dark)
+    c.setFont("Helvetica", 12)
+    c.drawString(x_margin + 5, height - 175, student_name)
+    c.drawString(x_margin + 5, height - 210, student_class)
+    c.drawString(x_margin + 305, height - 175, date_today)
+    c.drawString(x_margin + 305, height - 210, "Faculty (Auto-Generated)")
+
+    # 4. TABLE CONSTRUCTION
+    table_x = x_margin
+    table_y = height - 240
+    table_w = 495
+    col_widths = [230, 75, 75, 115] # Course Title, Units, Grade, Remarks
+    row_h = 22
+    
+    # Table Header Background (Brown)
+    c.setFillColor(brown_brand)
+    c.rect(table_x, table_y, table_w, 30, fill=1, stroke=0)
+    c.setStrokeColor(colors.white)
+    c.setLineWidth(0.5)
+    
+    # Table Header Text (White)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(table_x + 10, table_y + 10, "Course Title")
+    c.drawString(table_x + 235, table_y + 10, "No. of Units")
+    c.drawString(table_x + 315, table_y + 10, "Course Grade")
+    c.drawString(table_x + 385, table_y + 10, "Teacher's Remarks")
+    
+    # Draw Table Rows
+    current_y = table_y - row_h
+    units = "1"
+    
+    for subject in SUBJECTS:
+        # Border Lines (Optional clean grid)
+        c.setStrokeColor(colors.HexColor('#d0c8bc'))
+        c.setLineWidth(0.5)
         
-    grades_table = Table(table_content, colWidths=[150, 70, 95, 225])
-    ts = [
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#7A533E")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,0), 8),
-        ('BOTTOMPADDING', (0,0), (-1,0), 8),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E3DCD2")),
-    ]
-    for i in range(1, len(table_content)):
-        bg_color = colors.HexColor("#F7F3ED") if i % 2 == 0 else colors.HexColor("#FFFFFF")
-        ts.append(('BACKGROUND', (0,i), (-1,i), bg_color))
-        ts.append(('TOPPADDING', (0,i), (-1,i), 7))
-        ts.append(('BOTTOMPADDING', (0,i), (-1,i), 7))
+        # Fetch Subject Data
+        mark = marks_dict.get(subject, 0)
+        perc_sub = (mark / 100) * 100 if mark else 0 # Assuming max marks per subject is 100
+        grade, _, _ = get_grade_gpa(perc_sub)
+        remark = get_teacher_remarks(perc_sub)
         
-    grades_table.setStyle(TableStyle(ts))
-    story.append(grades_table)
-    story.append(Spacer(1, 25))
+        # Draw Row Background with slight transparency (Glass/Beige effect)
+        if current_y % 2 == 0: # Alternate faint row colors if desired, but image looks transparent/beige
+             c.setFillColor(colors.white)
+             c.setFillAlpha(0.1)
+             c.rect(table_x, current_y, table_w, row_h, fill=1, stroke=0)
+             c.setFillAlpha(1)
+        
+        # Draw Col 1 (Course Title - Red)
+        c.setFillColor(red_brand)
+        c.setFont("Helvetica", 10)
+        c.drawString(table_x + 10, current_y + 6, subject)
+        
+        # Draw Col 2 (Units - Black)
+        c.setFillColor(brown_dark)
+        c.drawString(table_x + 260, current_y + 6, units)
+        
+        # Draw Col 3 (Course Grade - Black)
+        c.drawString(table_x + 335, current_y + 6, grade)
+        
+        # Draw Col 4 (Remarks - Black)
+        c.drawString(table_x + 400, current_y + 6, remark)
+        
+        current_y -= row_h
     
-    key_box_data = [
-        [Paragraph("<b>GRADING KEY</b>", th_style)],
-        [Paragraph("A = 93% to 100% | 4.0/4.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; C = 70% to 72% | 1.7/4.0", key_style)],
-        [Paragraph("A- = 90% to 92% | 3.7/4.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; D+ = 67% to 69% | 1.3/4.0", key_style)],
-        [Paragraph("B+ = 87% to 89% | 3.3/4.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; D = 63% to 66% | 1.0/4.0", key_style)],
-        [Paragraph("B = 83% to 86% | 3.0/4.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; D- = 60% to 62% | 0.7/4.0", key_style)],
-        [Paragraph("B- = 80% to 82% | 2.7/4.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; F = 0% to 59% | 0.0/4.0", key_style)]
-    ]
-    key_box_table = Table(key_box_data, colWidths=[250])
-    key_box_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#7A533E")),
-        ('BACKGROUND', (0,1), (-1,-1), colors.HexColor("#F2ECE4")),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-    ]))
+    # 5. GRADING KEY SECTION (Matching Canva template structure)
+    key_x = x_margin
+    key_y = current_y - 30
+    key_h = 110
     
-    total_score = sum(student_info['marks'].values())
-    avg_pct = (total_score / TOTAL_MARKS) * 100
-    final_letter, final_gpa, _ = get_detailed_grade(avg_pct)
+    # Grading Key Label (Brown Box)
+    c.setFillColor(brown_brand)
+    c.rect(key_x, key_y, 130, key_h, fill=1, stroke=0)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawCentredString(key_x + 65, key_y + 55, "GRADING")
+    c.drawCentredString(key_x + 65, key_y + 40, "KEY")
     
-    summary_data = [
-        [Paragraph("Quarter One Marks", quarter_style), Paragraph("Quarter Three Marks", quarter_style)],
-        [Paragraph(f"<b>{total_score} / {TOTAL_MARKS}</b>", td_style), Paragraph("Pending Evaluation", td_style)],
-        [Spacer(1,5), Spacer(1,5)],
-        [Paragraph("Quarter Two Marks", quarter_style), Paragraph("Quarter Four Marks", quarter_style)],
-        [Paragraph(f"<b>GPA: {final_gpa} ({final_letter})</b>", td_style), Paragraph("Pending Evaluation", td_style)]
-    ]
-    summary_table = Table(summary_data, colWidths=[135, 135])
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (0,0), colors.HexColor("#F2ECE4")),
-        ('BACKGROUND', (1,0), (1,0), colors.HexColor("#F2ECE4")),
-        ('BACKGROUND', (0,3), (0,3), colors.HexColor("#F2ECE4")),
-        ('BACKGROUND', (1,3), (1,3), colors.HexColor("#F2ECE4")),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (0,1), 1, colors.HexColor("#D4C5B3")),
-        ('GRID', (1,0), (1,1), 1, colors.HexColor("#D4C5B3")),
-        ('GRID', (0,3), (0,4), 1, colors.HexColor("#D4C5B3")),
-        ('GRID', (1,3), (1,4), 1, colors.HexColor("#D4C5B3")),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-    ]))
+    # Grading Key Data (Beige Background Box)
+    c.setFillColor(cream_light)
+    c.setFillAlpha(0.8)
+    c.rect(key_x + 130, key_y, 365, key_h, fill=1, stroke=0)
+    c.setFillAlpha(1)
+    c.setFillColor(brown_dark)
+    c.setFont("Helvetica", 9)
     
-    footer_row_table = Table([[key_box_table, summary_table]], colWidths=[260, 280])
-    footer_row_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-    ]))
+    # Text Content for Grading Key (Left Column)
+    g_y = key_y + 90
+    c.drawString(key_x + 140, g_y, "A = 93% to 100% | 4.0/4.0")
+    c.drawString(key_x + 140, g_y - 12, "A- = 90% to 92% | 3.7/4.0")
+    c.drawString(key_x + 140, g_y - 24, "B+ = 87% to 89% | 3.3/4.0")
+    c.drawString(key_x + 140, g_y - 36, "B = 83% to 86% | 3.0/4.0")
+    c.drawString(key_x + 140, g_y - 48, "B- = 80% to 82% | 2.7/4.0")
+    c.drawString(key_x + 140, g_y - 60, "C+ = 77% to 79% | 2.3/4.0")
     
-    story.append(KeepTogether([footer_row_table]))
-    doc.build(story, onFirstPage=lambda c, d: c.draw_background())
+    # Text Content for Grading Key (Right Column)
+    c.drawString(key_x + 280, g_y, "C = 73% to 76% | 2.0/4.0")
+    c.drawString(key_x + 280, g_y - 12, "C- = 70% to 72% | 1.7/4.0")
+    c.drawString(key_x + 280, g_y - 24, "D+ = 67% to 69% | 1.3/4.0")
+    c.drawString(key_x + 280, g_y - 36, "D = 63% to 66% | 1.0/4.0")
+    c.drawString(key_x + 280, g_y - 48, "D- = 60% to 62% | 0.7/4.0")
+    c.drawString(key_x + 280, g_y - 60, "F = 0% to 59% | 0.0/4.0")
+    c.drawString(key_x + 280, g_y - 72, "I = Incomplete")
+
+    # 6. FOOTER SECTION
+    footer_y = 0
+    footer_h = 40
+    c.setFillColor(brown_brand)
+    c.rect(0, footer_y, width, footer_h, fill=1, stroke=0)
+    
+    # Quarter Boxes
+    box_w = 110
+    box_h = 25
+    box_y = 8
+    quarters = ["Quarter One", "Quarter Two", "Quarter Three", "Quarter Four"]
+    
+    for i, q in enumerate(quarters):
+        box_x = 40 + (i * 130)
+        c.setFillColor(colors.white)
+        c.rect(box_x, box_y, box_w, box_h, fill=1, stroke=0)
+        c.setFillColor(brown_brand)
+        c.setFont("Helvetica", 9)
+        c.drawCentredString(box_x + (box_w/2), box_y + 13, q)
+
+    # Finalize PDF
+    c.save()
     buffer.seek(0)
     return buffer
 
-# ---------- ULTRA-PREMIUM GUI THEMING CONTROLS (CSS WITH INPUT FIX) ----------
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-    
-    /* Global Overrides */
-    html, body, [data-testid="stAppViewContainer"] {
-        font-family: 'Poppins', sans-serif;
-        background: linear-gradient(135deg, #0B0F19 0%, #111827 50%, #1F2937 100%) !important;
-        color: #F3F4F6 !important;
-    }
-    
-    h1, h2, h3, p, span, label {
-        color: #F3F4F6 !important;
-    }
-    
-    /* Glassmorphism Navigation Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: rgba(17, 24, 39, 0.7) !important;
-        backdrop-filter: blur(20px);
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    
-    /* Luxury Container Cards */
-    .premium-card {
-        background: rgba(255, 255, 255, 0.04);
-        padding: 30px;
-        border-radius: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(16px);
-        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
-        margin-bottom: 25px;
-    }
-
-    /* Premium Button Overlays */
-    .stButton>button {
-        background: linear-gradient(90deg, #00F2FE 0%, #4FACFE 100%) !important;
-        color: #0B0F19 !important;
-        border-radius: 50px !important;
-        border: none !important;
-        padding: 12px 35px !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1.5px !important;
-        box-shadow: 0 4px 20px rgba(79, 172, 254, 0.4) !important;
-    }
-    
-    /* CRITICAL FIX: Modern Input Text Visibility Fix */
-    div[data-testid="stTextInput"] input, 
-    div[data-testid="stNumberInput"] input,
-    div[data-baseweb="input"] input,
-    input {
-        background-color: rgba(255, 255, 255, 0.07) !important;
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 12px !important;
-    }
-    
-    div[data-testid="stWidgetLabel"] p {
-        color: #00F2FE !important;
-        font-weight: 600;
-    }
-    
-    div[data-testid="stTable"] table {
-        background-color: rgba(255, 255, 255, 0.02) !important;
-        border-collapse: separate !important;
-        border-radius: 14px !important;
-        overflow: hidden !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    }
-    div[data-testid="stTable"] th {
-        background-color: rgba(79, 172, 254, 0.15) !important;
-        color: #00F2FE !important;
-        padding: 14px !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# ---------- APPLICATION INTERACTION CONTROLLER ----------
+# ---------- DATA PREPARATION ----------
 data = load_data()
 
-st.sidebar.markdown("<h1 style='text-align: center; color: #00F2FE; font-weight:700;'>💎 ELITE SMS</h1>", unsafe_allow_html=True)
-st.sidebar.markdown("<p style='text-align: center; font-size:12px; color: #9CA3AF;'>SaaS Academic Infrastructure Engine</p>", unsafe_allow_html=True)
-st.sidebar.write("---")
-choice = st.sidebar.radio("SYSTEM NAVIGATION", ["🏠 DASHBOARD HOME", "🔐 CONTROL PANEL", "👨‍🎓 REPORT CARD PORTAL"])
+# ---------- APP NAVIGATION ----------
+st.sidebar.markdown(
+    "<h2 style='text-align:center; color:#c83c2f; font-family:Poppins, sans-serif;'>📘 ELITE PORTAL</h2>", 
+    unsafe_allow_html=True
+)
+st.sidebar.markdown("<hr style='border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
+choice = st.sidebar.radio("NAVIGATION", ["🏠 MAIN MENU", "🔐 ADMIN ACCESS", "👨‍🎓 STUDENT RESULT"], index=0)
 
-# --- VIEW 1: RUNTIME HOME (UPGRADED WITH ANALYTICS ENGINE) ---
-if choice == "🏠 DASHBOARD HOME":
-    st.markdown("<h1 style='text-align: center; font-weight:700; letter-spacing:-1px;'>Elite Management Framework</h1>", unsafe_allow_html=True)
-    
-    # Live Quick Stats Analytics Feature
-    if data:
-        total_students = len(data)
-        all_scores = [sum(info['marks'].values()) / TOTAL_MARKS * 100 for info in data.values()]
-        avg_school_score = sum(all_scores) / total_students
-        
-        c1, c2, c3 = st.columns(3)
-        c1.metric("TOTAL ACTIVE PROFILES", f"{total_students} Students")
-        c2.metric("GLOBAL ACADEMIC YIELD", f"{avg_school_score:.2f}%")
-        c3.metric("SYSTEM INTEGRITY STATUS", "SECURE (100%)")
-        
-        # Performance Distribution Chart Feature
-        st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-        st.subheader("📊 Cross-Student Performance Metric Mapping")
-        chart_df = pd.DataFrame({
-            "Student Name": [info['name'] for info in data.values()],
-            "Overall Grade Yield (%)": all_scores
-        }).set_index("Student Name")
-        st.bar_chart(chart_df)
-        st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class='premium-card' style='text-align: center;'>
-            <h3 style='color: #00F2FE !important;'>Next-Gen Student Analytics and Dynamic Asset Generation Pipeline</h3>
-            <p style='color: #9CA3AF !important;'>Welcome to the operational hub. To get started instantly, move to the control panel or seed the mock engine inside the structural export workspace.</p>
+# ---------- PAGE 1: MAIN MENU ----------
+if choice == "🏠 MAIN MENU":
+    st.markdown(
+        "<h1 style='font-family: Poppins, sans-serif; text-align:center;'>Anderson Family <br><span style='color:#c83c2f;'>Homeschool Management</span></h1>", 
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        """
+        <div class='premium-glass-card' style='text-align:center;'>
+            <h3>Enter the secure portal below.</h3>
+            <p>Access real-time analytics, encrypted student records, and dynamic report generation.</p>
+            <p style='color:#c83c2f; font-size: 12px;'>* System designed to generate Canva-standard PDF report cards.</p>
         </div>
-        """, unsafe_allow_html=True)
+        """, 
+        unsafe_allow_html=True
+    )
+    st.image("https://img.freepik.com/free-vector/gradient-education-elements-background_23-2148851503.jpg", use_container_width=True)
 
-    st.image("https://img.freepik.com/free-vector/connected-world-concept-illustration_114360-3027.jpg", use_container_width=True)
-
-# --- VIEW 2: DATABASE ADMIN ACCESS CONTROL ---
-elif choice == "🔐 CONTROL PANEL":
-    st.title("🛡️ Central Core Control Panel")
+# ---------- PAGE 2: ADMIN ACCESS ----------
+elif choice == "🔐 ADMIN ACCESS":
+    st.markdown("<h2 style='font-family: Poppins, sans-serif;'>🛡️ Secure Admin Terminal</h2>", unsafe_allow_html=True)
     
     if 'admin_auth' not in st.session_state: 
         st.session_state.admin_auth = False
 
     if not st.session_state.admin_auth:
-        st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-        with st.form("Identity Verification"):
-            st.subheader("Administrative Credential Crypt-Lock")
-            u = st.text_input("Username Key", placeholder="admin")
-            p = st.text_input("Security Phrase Code", type="password")
-            if st.form_submit_button("AUTHORIZE ENTRY"):
+        with st.form("Login"):
+            st.markdown("<div class='premium-glass-card'><h4>Authentication</h4>", unsafe_allow_html=True)
+            u = st.text_input("Username", placeholder="admin")
+            p = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("UNSEAL ACCESS")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            if submitted:
                 if u == ADMIN_USERNAME and p == ADMIN_PASSWORD:
                     st.session_state.admin_auth = True
                     st.rerun()
-                else: 
-                    st.error("Access Denied: Signature Mismatch Check.")
-        st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div class='premium-alert-error'>Access Denied: Invalid Credentials.</div>", unsafe_allow_html=True)
     else:
-        st.sidebar.button("TERMINATE ADMIN SESSION", on_click=lambda: st.session_state.update({"admin_auth": False}))
+        st.sidebar.button("🛑 LOGOUT", on_click=lambda: st.session_state.update({"admin_auth": False}))
         
-        tab1, tab2, tab3, tab4 = st.tabs(["📝 Add Record Entry", "📊 Ledger Analytics", "🔄 Hot-Fix Modification & Deletion", "📥 Structural Export & Tools"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📝 Register New", "🗄️ View Database", "🔄 Update Marks", "📥 Export Data"])
 
         with tab1:
-            st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-            st.subheader("Register New Entry Profile")
+            st.markdown("<div class='premium-glass-card'>", unsafe_allow_html=True)
+            st.subheader("Register New Student Record")
             with st.form("add_form", clear_on_submit=True):
-                col1, col2, col3 = st.columns(3)
-                r = col1.text_input("Roll ID Key (e.g. 1001)")
-                n = col2.text_input("Full Legal Identity Name")
-                cl = col3.text_input("Academic Level Grade")
-                sess = st.text_input("Session Period Window", value="2026-2027")
-                
-                st.write("---")
-                st.markdown("<p style='color: #00F2FE; font-weight:600;'>Subject Matrix Allocation Metrics (Max 100)</p>", unsafe_allow_html=True)
+                col1, col2 = st.columns(2)
+                r = col1.text_input("Roll Number")
+                n = col2.text_input("Student Name")
+                cl = st.text_input("Class")
+                st.write("Subject Marks (Max 100)")
                 marks = {}
-                m_cols = st.columns(3)
-                for idx, sub in enumerate(SUBJECTS):
-                    marks[sub] = m_cols[idx % 3].number_input(sub, min_value=0, max_value=100, value=90)
+                m_cols = st.columns(2)
+                for i, sub in enumerate(SUBJECTS):
+                    marks[sub] = m_cols[i%2].number_input(sub, 0, 100)
                 
-                if st.form_submit_button("COMMIT ENTRY TO LOGS"):
+                submitted_form = st.form_submit_button("SUBMIT DATA")
+                if submitted_form:
                     if r and n:
-                        data[r] = {"name": n, "class": cl, "session": sess, "marks": marks, "date": str(datetime.now().date())}
+                        data[r] = {
+                            "name": n, 
+                            "class": cl, 
+                            "marks": marks, 
+                            "date": str(datetime.now().date())
+                        }
                         save_data(data)
-                        st.snow()
-                        st.success(f"Record profile tracking system online for {n}.")
-                    else: 
-                        st.error("Execution Interrupted: Required primary record strings missing.")
+                        st.markdown("<div class='premium-alert-success'>Record for {} encrypted & saved successfully!</div>".format(n), unsafe_allow_html=True)
+                    else:
+                        st.markdown("<div class='premium-alert-error'>Critical fields (Roll / Name) missing!</div>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
         with tab2:
-            st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-            st.subheader("Active Registry Storage Stream")
+            st.subheader("Global Student Database")
             if data:
-                db_list = [{"Roll ID": r, "Identity": i['name'], "Level": i['class'], "Aggregated Total": sum(i['marks'].values())} for r, i in data.items()]
+                db_list = [{"Roll": r, "Name": i['name'], "Class": i['class'], "Total": sum(i['marks'].values())} for r, i in data.items()]
                 st.dataframe(pd.DataFrame(db_list), use_container_width=True)
-            else: 
-                st.info("System Vault Data Engine is completely unpopulated.")
-            st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div class='premium-alert-info'>No records found in the encrypted vault.</div>", unsafe_allow_html=True)
 
         with tab3:
-            st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-            st.subheader("Hot-Patch Data Record Utility")
-            u_roll = st.text_input("Query Verification Roll ID Target")
+            st.subheader("Modification Interface")
+            u_roll = st.text_input("Target Roll Number")
             if u_roll in data:
-                # CRUD Delete Feature Upgrade Added Here
-                if st.button("🔥 PERMANENTLY ERASE THIS STUDENT PROFILE", type="secondary"):
-                    del data[u_roll]
-                    save_data(data)
-                    st.warning("Profile purged from secure localized disk.")
-                    st.rerun()
-                
                 with st.form("upd"):
-                    st.info(f"Writing Overwrite Sequence For Student: {data[u_roll]['name']}")
-                    new_m = {sub: st.number_input(sub, 0, 100, value=data[u_roll]['marks'].get(sub, 90)) for sub in SUBJECTS}
-                    if st.form_submit_button("OVERWRITE STORED METRICS"):
+                    st.info(f"Modifying Record for: {data[u_roll]['name']}")
+                    new_m = {sub: st.number_input(sub, 0, 100, value=data[u_roll]['marks'].get(sub, 0)) for sub in SUBJECTS}
+                    if st.form_submit_button("OVERWRITE MARKS"):
                         data[u_roll]['marks'] = new_m
                         save_data(data)
-                        st.success("Buffer updates successfully integrated into persistence volume.")
-            elif u_roll: 
-                st.error("Specified ID mapping target failed search parameters.")
-            st.markdown("</div>", unsafe_allow_html=True)
+                        st.markdown("<div class='premium-alert-success'>Buffer overwritten successfully!</div>", unsafe_allow_html=True)
+            elif u_roll:
+                st.markdown("<div class='premium-alert-error'>Target Roll Number not found.</div>", unsafe_allow_html=True)
 
         with tab4:
-            st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-            st.subheader("Data Portability Extraction Matrix")
+            st.subheader("Data Extraction")
             if data:
                 export_list = []
                 for r, info in data.items():
-                    row = {"Roll ID": r, "Identity Name": info['name'], "Academic Level": info['class']}
+                    row = {"Roll": r, "Name": info['name'], "Class": info['class']}
                     row.update(info['marks'])
                     t = sum(info['marks'].values())
-                    p = (t / TOTAL_MARKS) * 100
-                    row.update({"Total Matrix": t, "Percentage Yield": f"{p:.2f}%", "Letter Code": get_detailed_grade(p)[0]})
+                    p = (t/700)*100
+                    grade, gpa, _ = get_grade_gpa(p)
+                    row.update({"Total": t, "Percentage": f"{p:.2f}%", "Grade": grade})
                     export_list.append(row)
-                st.download_button("GENERATE STRUCTURAL FLAT FILE (CSV)", pd.DataFrame(export_list).to_csv(index=False).encode('utf-8'), "Elite_Academic_Registry.csv")
-            
-            # Auto Seeder Feature Setup
-            st.write("---")
-            st.subheader("🛠️ Fast Diagnostics & Seeder")
-            if st.button("🚀 INITIALIZE SAMPLE REGISTRY DATA LOGS"):
-                seed_sample_data()
-            st.markdown("</div>", unsafe_allow_html=True)
-
-# --- VIEW 3: SECURE STUDENT SHEET EXTRACTION & GENERATION ---
-elif choice == "👨‍🎓 REPORT CARD PORTAL":
-    st.title("🎓 High-Fidelity Performance Portal")
-    st.write("Extract encrypted metrics and compile print-ready academic documentation instantly.")
-    
-    col_l, col_r = st.columns([1, 2])
-    
-    with col_l:
-        st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-        roll = st.text_input("Encrypted Identity Roll Number", placeholder="e.g. 1001")
-        retrieve_triggered = st.button("RETRIEVE PERFORMANCE METRICS")
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-    if roll:
-        if roll in data:
-            s_data = data[roll]
-            if retrieve_triggered:
-                st.balloons()
-            
-            with col_r:
-                st.markdown(f"""
-                <div class='premium-card'>
-                    <small style='color: #00F2FE; text-transform: uppercase; font-weight:700; letter-spacing:1px;'>Verified Academic Registry Profile Found</small>
-                    <h1 style='margin:0; color:#FFFFFF; font-weight: 700;'>{s_data['name']}</h1>
-                    <p style='color: #9CA3AF; margin-top:5px;'>Class/Level Assignment: <b>{s_data['class']}</b> &nbsp;|&nbsp; Active Session: <b>{s_data.get('session', '2026-2027')}</b></p>
-                </div>
-                """, unsafe_allow_html=True)
                 
-                rendered_metrics_list = []
-                for sub in SUBJECTS:
-                    m_val = s_data['marks'].get(sub, 0)
-                    l_grd, gpa_val, remk = get_detailed_grade(m_val)
-                    rendered_metrics_list.append({
-                        "Subject Area": sub,
-                        "Obtained Marks": f"{m_val} / 100",
-                        "Letter Grade": l_grd,
-                        "GPA Assignment": gpa_val,
-                        "Evaluation Summary": remk
-                    })
-                
-                st.table(pd.DataFrame(rendered_metrics_list))
-                
-                tot = sum(s_data['marks'].values())
-                p_yield = (tot / TOTAL_MARKS) * 100
-                badge_lbl, badge_col = get_ui_badge(p_yield)
-                
-                c1, c2, c3 = st.columns(3)
-                c1.metric("AGGREGATE RAW TOTAL", f"{tot} / {TOTAL_MARKS}")
-                c2.metric("PROPORTIONAL YIELD (%)", f"{p_yield:.2f}%")
-                
-                with c3:
-                    st.markdown(f"""
-                        <div style='background: rgba(255,255,255,0.03); padding: 10px 20px; border-radius:16px; border: 1px solid {badge_col}; text-align: center;'>
-                            <small style='color: #9CA3AF; font-size:11px; text-transform:uppercase;'>System Performance Index</small>
-                            <h3 style='color: {badge_col} !important; margin: 5px 0 0 0; font-weight:700;'>{badge_lbl}</h3>
-                        </div>
-                    """, unsafe_allow_html=True)
-                
-                # --- AUTOMATED HIGH-FIDELITY PRINT-READY PDF GENERATION ENGINE ---
-                st.markdown("<div class='download-btn-container'>", unsafe_allow_html=True)
-                pdf_output_stream = generate_pdf(roll, s_data)
+                csv_data = pd.DataFrame(export_list).to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label="📥 DOWNLOAD OFFICIAL CANVA-STYLE PROGRESS REPORT (PDF)",
-                    data=pdf_output_stream,
-                    file_name=f"Progress_Report_{s_data['name'].replace(' ', '_')}.pdf",
-                    mime="application/pdf"
+                    label="📤 GENERATE & DOWNLOAD CSV", 
+                    data=csv_data, 
+                    file_name="Elite_Student_Data.csv",
+                    mime="text/csv"
                 )
-                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div class='premium-alert-info'>No data available for extraction.</div>", unsafe_allow_html=True)
+
+# ---------- PAGE 3: STUDENT RESULT ----------
+elif choice == "👨‍🎓 STUDENT RESULT":
+    st.markdown("<h2 style='font-family: Poppins, sans-serif;'>🎓 Digital Marksheet Portal</h2>", unsafe_allow_html=True)
+    
+    st.markdown("<div class='premium-glass-card'>", unsafe_allow_html=True)
+    st.markdown("<h4>Verify Identity</h4>", unsafe_allow_html=True)
+    roll = st.text_input("Enter Encrypted Roll Number", placeholder="e.g. 1001")
+    
+    if st.button("🔍 RETRIEVE RESULT"):
+        if roll in data:
+            s = data[roll]
+            st.balloons()
+            
+            # Display in custom Premium Glass Card
+            total = sum(s['marks'].values())
+            perc = (total/TOTAL_MARKS)*100
+            grade, gpa, _ = get_grade_gpa(perc)
+            
+            st.markdown(
+                f"""
+                <div class='premium-glass-card' style='border-top: 4px solid #c83c2f;'>
+                    <h2 style='margin:0; color:#ffffff; font-family: Poppins, sans-serif;'>{s['name']}</h2>
+                    <p style='color:#c83c2f;'>Roll: {roll} | Class: {s['class']} | Session: 2024-25</p>
+                    <hr style='border: 0; height: 1px; background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);'>
+                    
+                    <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;'>
+                        <div style='background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;'>
+                            <p style='margin:0; font-size: 12px; color: #a0a0a0;'>TOTAL OBTAINED</p>
+                            <p style='margin:0; font-size: 24px; font-weight: bold; color: #ffffff;'>{total} / {TOTAL_MARKS}</p>
+                        </div>
+                        <div style='background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;'>
+                            <p style='margin:0; font-size: 12px; color: #a0a0a0;'>PERCENTAGE</p>
+                            <p style='margin:0; font-size: 24px; font-weight: bold; color: #ffffff;'>{perc:.2f}%</p>
+                        </div>
+                    </div>
+                    
+                    <div style='margin-top: 15px; display: flex; justify-content: space-between; align-items: center;'>
+                        <p style='margin:0; color: #ffffff;'>Letter Grade:</p>
+                        <p style='margin:0; font-size: 28px; font-weight: 800; color: #c83c2f; font-family: Poppins, sans-serif;'>{grade}</p>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            # Subject breakdown table using Pandas and Streamlit dataframe (styled by our global CSS)
+            df_m = pd.DataFrame(list(s['marks'].items()), columns=["Subject", "Obtained"])
+            st.markdown("<p style='color:#c83c2f; font-weight:bold;'>Detailed Subject Breakdown:</p>", unsafe_allow_html=True)
+            st.dataframe(df_m, use_container_width=True)
+
+            # PDF GENERATION AND DOWNLOAD BUTTON
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            pdf_buffer = generate_pdf_report(roll, s['name'], s['class'], s['marks'], today_str)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.download_button(
+                label="📥 Download Official Progress Report (PDF)",
+                data=pdf_buffer,
+                file_name=f"{s['name']}_{roll}_Progress_Report.pdf",
+                mime="application/pdf",
+                key="pdf_download"
+            )
+
         else:
-            if retrieve_triggered or roll:
-                st.error("Identity lookup match query missing from current localized secure directory storage.")
+            st.markdown("<div class='premium-alert-error'>⛔ ERROR: Roll Number not verified in system.</div>", unsafe_allow_html=True)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
