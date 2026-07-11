@@ -8,11 +8,13 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 
-# ------ PLOTLY IMPORT WITH ERROR HANDLING (CRASH FIX) ------
+# ------ PLOTLY IMPORT WITH ULTIMATE EXCEPTION HANDLING (CRASH FIX) ------
+PLOTLY_AVAILABLE = False
 try:
     import plotly.graph_objects as go
     PLOTLY_AVAILABLE = True
-except ImportError:
+except Exception:
+    # CATCHES ImportError, TypeError, AttributeError, or any deep dependency failure!
     PLOTLY_AVAILABLE = False
 
 # ---------- CONFIGURATION & DATA CONSTANTS ----------
@@ -40,13 +42,13 @@ st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Poppins:wght@400;600;700&display=swap');
     
-    /* ---------- GLOBAL FONT & CONTRAST FIX (Million Dollar Update) ---------- */
+    /* ---------- GLOBAL FONT & CONTRAST FIX ---------- */
     .stApp, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp p, .stApp li, .stApp span:not(.brand-text) {{
-        color: {text_color} !important; /* Ensures Black on White, White on Dark */
+        color: {text_color} !important;
         font-family: 'Inter', sans-serif;
     }}
     .brand-text {{
-        color: #c83c2f !important; /* Reserves Red color for branding */
+        color: #c83c2f !important;
     }}
     
     .stApp {{
@@ -61,7 +63,6 @@ st.markdown(f"""
         100% {{ background-position: 0% 50%; }}
     }}
 
-    /* Custom Scrollbar */
     ::-webkit-scrollbar {{ width: 8px; }}
     ::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
     ::-webkit-scrollbar-thumb {{ background: #7a4c34; border-radius: 10px; }}
@@ -72,7 +73,6 @@ st.markdown(f"""
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }}
     
-    /* Inputs */
     div[data-testid="stTextInput"] input, div[data-testid="stNumberInput"] input {{
         background: {input_bg} !important;
         border: 1px solid {input_border} !important;
@@ -86,7 +86,6 @@ st.markdown(f"""
         box-shadow: 0 0 20px rgba(200, 60, 47, 0.3);
     }}
     
-    /* Premium Cards */
     .premium-glass-card {{
         background: {card_bg};
         backdrop-filter: blur(16px);
@@ -99,7 +98,6 @@ st.markdown(f"""
     }}
     .premium-glass-card:hover {{ transform: translateY(-5px); box-shadow: 0 20px 60px {shadow_color}; }}
 
-    /* Premium Buttons */
     div.stButton > button {{
         background: linear-gradient(135deg, #7a4c34 0%, #c83c2f 100%) !important;
         color: white !important;
@@ -114,7 +112,6 @@ st.markdown(f"""
     }}
     div.stButton > button:hover {{ transform: scale(1.05) !important; box-shadow: 0 8px 30px rgba(200, 60, 47, 0.7) !important; }}
 
-    /* Custom Metrics */
     .metric-card {{
         background: rgba(255,255,255,0.05);
         border-radius: 16px;
@@ -125,7 +122,6 @@ st.markdown(f"""
     .metric-card h3 {{ margin:0; color:#c83c2f; font-size:12px; letter-spacing:2px; text-transform:uppercase; }}
     .metric-card h2 {{ margin:0; font-size:38px; font-weight:700; }}
 
-    /* Alerts */
     .alert-box {{
         padding: 15px;
         border-radius: 12px;
@@ -173,7 +169,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     
-    # Exact Canva Colors
     brown_dark = colors.HexColor('#604227')
     brown_brand = colors.HexColor('#7a4c34')
     red_brand = colors.HexColor('#c83c2f')
@@ -183,7 +178,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.setFillColor(cream_bg)
     c.rect(0, 0, width, height, fill=1, stroke=0)
     
-    # Overlapping Circles
     c.setFillColor(colors.HexColor('#e0d7c8'))
     c.circle(70, height - 60, 50, stroke=0, fill=1)
     c.setFillColor(colors.HexColor('#d4c8b6'))
@@ -193,7 +187,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.circle(145, height - 80, 45, stroke=0, fill=1)
     c.setFillAlpha(1)
 
-    # Header
     c.setFillColor(brown_brand)
     c.roundRect((width - 250) / 2, height - 90, 250, 55, 10, fill=1, stroke=0)
     c.setFillColor(colors.white)
@@ -203,7 +196,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.setFont("Helvetica", 12)
     c.drawCentredString(width/2, height - 120, "Anderson Family Homeschool")
 
-    # Student Info
     x_margin = 50
     c.setFillColor(red_brand)
     c.setFont("Helvetica-Bold", 11)
@@ -226,7 +218,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.drawString(x_margin + 305, height - 175, date_today)
     c.drawString(x_margin + 305, height - 210, "Faculty (Auto-Generated)")
 
-    # Data Table
     table_x, table_y, table_w = x_margin, height - 240, 495
     row_h = 22
     
@@ -261,7 +252,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
         c.drawString(table_x + 400, current_y + 6, remark)
         current_y -= row_h
     
-    # Grading Key
     key_x, key_y, key_h = x_margin, current_y - 30, 115
     c.setFillColor(brown_brand)
     c.rect(key_x, key_y, 130, key_h, fill=1, stroke=0)
@@ -292,7 +282,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.drawString(key_x + 280, g_y - 48, "F  = 0% to 59% | 0.0/4.0")
     c.drawString(key_x + 280, g_y - 60, "I  = Incomplete")
 
-    # Footer
     footer_y, footer_h = 0, 45
     c.setFillColor(brown_brand)
     c.rect(0, footer_y, width, footer_h, fill=1, stroke=0)
@@ -349,7 +338,6 @@ elif choice == "🛡️ Admin Panel":
             c1, c2, c3 = st.columns(3)
             c1.markdown(f"<div class='metric-card'><h3>Total Students</h3><h2>{len(data)}</h2></div>", unsafe_allow_html=True)
             c2.markdown(f"<div class='metric-card'><h3>Avg Performance</h3><h2>{sum(totals)/len(totals)/7:.1f}%</h2></div>", unsafe_allow_html=True)
-            # CRASH FIX: 100% sure top_student wohi select karega jab data ho
             top_student = max(data.items(), key=lambda x: sum(x[1]['marks'].values()))
             c3.markdown(f"<div class='metric-card'><h3>🏆 Top Scorer</h3><h2>{top_student[1]['name']}</h2></div>", unsafe_allow_html=True)
         else:
@@ -440,7 +428,6 @@ elif choice == "📋 Student Result":
                     st.metric("GPA (4.0 Scale)", gpa)
                 
                 with c2:
-                    # CRASH FIX: Plotly import check
                     if PLOTLY_AVAILABLE:
                         try:
                             fig = go.Figure(data=go.Scatterpolar(
@@ -464,7 +451,6 @@ elif choice == "📋 Student Result":
                     else:
                         st.info("📊 Upgrade for interactive Radar Chart! Run `pip install plotly` in your terminal.")
                 
-                # Generate PDF
                 with st.spinner("Generating Premium PDF..."):
                     pdf = generate_pdf_report(roll, s['name'], s['class'], s['marks'], str(datetime.now().date()))
                     st.download_button("📥 Download Official Progress Report (PDF)", data=pdf, file_name=f"{s['name']}_{roll}_Report.pdf")
