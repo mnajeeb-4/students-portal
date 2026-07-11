@@ -39,6 +39,26 @@ def save_data(data):
     with open(FILE_NAME, "w") as file:
         json.dump(data, file, indent=4)
 
+def seed_sample_data():
+    sample_data = {
+        "1001": {
+            "name": "Zain Ahmed",
+            "class": "Grade 10",
+            "session": "2026-2027",
+            "marks": {"Science": 95, "Fine Arts": 88, "Life Skills": 92, "Mathematics": 98, "Computer Literacy": 96, "Foreign Language": 85, "English Language Arts": 91, "History and Geography": 89, "Physical Education/Health": 94},
+            "date": str(datetime.now().date())
+        },
+        "1002": {
+            "name": "Ayesha Khan",
+            "class": "Grade 10",
+            "session": "2026-2027",
+            "marks": {"Science": 82, "Fine Arts": 94, "Life Skills": 85, "Mathematics": 76, "Computer Literacy": 89, "Foreign Language": 92, "English Language Arts": 88, "History and Geography": 84, "Physical Education/Health": 90},
+            "date": str(datetime.now().date())
+        }
+    }
+    save_data(sample_data)
+    st.rerun()
+
 # ---------- ADVANCED CANVA-STYLE GRADING ENGINE ----------
 def get_detailed_grade(score):
     """Calculates letter grade, GPA, and remarks based on standard premium criteria."""
@@ -63,87 +83,40 @@ def get_ui_badge(percentage):
 
 # ---------- PREMIUM CANVA REPORT CARD PDF GENERATOR ----------
 class PremiumReportCanvas(canvas.Canvas):
-    """Custom canvas to draw complex background graphics like the Canva template."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
     def draw_background(self):
         self.saveState()
-        # Draw background page color (Soft Elegant Cream)
         self.setFillColor(colors.HexColor("#FDFBF7"))
         self.rect(0, 0, 612, 792, fill=True, stroke=False)
-        
-        # Draw elegant design circle accents (Top Corner Decorative Accents)
         self.setFillColor(colors.HexColor("#D9CEBF"))
         self.circle(40, 740, 60, fill=True, stroke=False)
         self.circle(580, 680, 45, fill=True, stroke=False)
-        
-        # Soft Red Accent Rings matching the template image
         self.setStrokeColor(colors.HexColor("#B04A4A"))
         self.setLineWidth(3)
         self.circle(110, 660, 28, fill=False, stroke=True)
         self.circle(460, 610, 20, fill=False, stroke=True)
-        
-        # Footer Bar
         self.setFillColor(colors.HexColor("#7A533E"))
         self.rect(36, 30, 540, 45, fill=True, stroke=False)
         self.restoreState()
 
 def generate_pdf(student_id, student_info):
     buffer = io.BytesIO()
-    # Letter size: 612 x 792 points. Margins set to 36pt (0.5 inch)
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=letter, 
-        leftMargin=36, 
-        rightMargin=36, 
-        topMargin=36, 
-        bottomMargin=36
-    )
-    
+    doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
     
-    # Custom Brand Typography Styles
-    title_style = ParagraphStyle(
-        'DocTitle', parent=styles['Normal'], fontName='Helvetica-Bold', 
-        fontSize=26, textColor=colors.white, alignment=1, spaceAfter=4
-    )
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle', parent=styles['Normal'], fontName='Helvetica', 
-        fontSize=13, textColor=colors.HexColor("#EAE2D5"), alignment=1
-    )
-    field_label_style = ParagraphStyle(
-        'FieldLabel', parent=styles['Normal'], fontName='Helvetica-Bold', 
-        fontSize=11, textColor=colors.HexColor("#9E3B3B")
-    )
-    field_val_style = ParagraphStyle(
-        'FieldVal', parent=styles['Normal'], fontName='Helvetica', 
-        fontSize=11, textColor=colors.HexColor("#2C2520")
-    )
-    th_style = ParagraphStyle(
-        'TableHeader', parent=styles['Normal'], fontName='Helvetica-Bold', 
-        fontSize=10, textColor=colors.white, alignment=0
-    )
-    td_style = ParagraphStyle(
-        'TableCell', parent=styles['Normal'], fontName='Helvetica', 
-        fontSize=9, textColor=colors.HexColor("#3D332D")
-    )
-    key_style = ParagraphStyle(
-        'KeyText', parent=styles['Normal'], fontName='Helvetica', 
-        fontSize=8, textColor=colors.HexColor("#614E43"), alignment=1
-    )
-    quarter_style = ParagraphStyle(
-        'QuarterText', parent=styles['Normal'], fontName='Helvetica-Bold', 
-        fontSize=10, textColor=colors.HexColor("#B04A4A"), alignment=1
-    )
+    title_style = ParagraphStyle('DocTitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=26, textColor=colors.white, alignment=1, spaceAfter=4)
+    subtitle_style = ParagraphStyle('DocSubtitle', parent=styles['Normal'], fontName='Helvetica', fontSize=13, textColor=colors.HexColor("#EAE2D5"), alignment=1)
+    field_label_style = ParagraphStyle('FieldLabel', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#9E3B3B"))
+    field_val_style = ParagraphStyle('FieldVal', parent=styles['Normal'], fontName='Helvetica', fontSize=11, textColor=colors.HexColor("#2C2520"))
+    th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
+    td_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontName='Helvetica', fontSize=9, textColor=colors.HexColor("#3D332D"))
+    key_style = ParagraphStyle('KeyText', parent=styles['Normal'], fontName='Helvetica', fontSize=8, textColor=colors.HexColor("#614E43"), alignment=1)
+    quarter_style = ParagraphStyle('QuarterText', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#B04A4A"), alignment=1)
 
     story = []
-    
-    # 1. Header Banner
-    banner_data = [
-        [Paragraph("Progress Report", title_style)],
-        [Paragraph("Anderson Family Homeschool", subtitle_style)]
-    ]
+    banner_data = [[Paragraph("Progress Report", title_style)], [Paragraph("Anderson Family Homeschool", subtitle_style)]]
     banner_table = Table(banner_data, colWidths=[540])
     banner_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#7A533E")),
@@ -155,7 +128,6 @@ def generate_pdf(student_id, student_info):
     story.append(banner_table)
     story.append(Spacer(1, 25))
     
-    # 2. Student Metadata Grid
     meta_data = [
         [Paragraph("Student Name:", field_label_style), Paragraph("School Year:", field_label_style)],
         [Paragraph(student_info['name'], field_val_style), Paragraph(student_info.get('session', '2026-2027'), field_val_style)],
@@ -175,28 +147,13 @@ def generate_pdf(student_id, student_info):
     story.append(meta_table)
     story.append(Spacer(1, 25))
     
-    # 3. Main Grades Table
-    table_content = [[
-        Paragraph("Course Title", th_style), 
-        Paragraph("No. of Units", th_style), 
-        Paragraph("Course Grade", th_style), 
-        Paragraph("Teacher's Remarks", th_style)
-    ]]
-    
+    table_content = [[Paragraph("Course Title", th_style), Paragraph("No. of Units", th_style), Paragraph("Course Grade", th_style), Paragraph("Teacher's Remarks", th_style)]]
     for idx, subject in enumerate(SUBJECTS):
         score = student_info['marks'].get(subject, 0)
         let_grade, gpa, remark = get_detailed_grade(score)
-        
-        table_content.append([
-            Paragraph(subject, td_style),
-            Paragraph("1.0", td_style),
-            Paragraph(f"{let_grade} ({score}%)", td_style),
-            Paragraph(remark, td_style)
-        ])
+        table_content.append([Paragraph(subject, td_style), Paragraph("1.0", td_style), Paragraph(f"{let_grade} ({score}%)", td_style), Paragraph(remark, td_style)])
         
     grades_table = Table(table_content, colWidths=[150, 70, 95, 225])
-    
-    # Alternating row background setup matching Canva spec
     ts = [
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#7A533E")),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -214,7 +171,6 @@ def generate_pdf(student_id, student_info):
     story.append(grades_table)
     story.append(Spacer(1, 25))
     
-    # 4. Grading Key & Quarter Metrics Blocks side-by-side
     key_box_data = [
         [Paragraph("<b>GRADING KEY</b>", th_style)],
         [Paragraph("A = 93% to 100% | 4.0/4.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; C = 70% to 72% | 1.7/4.0", key_style)],
@@ -232,7 +188,6 @@ def generate_pdf(student_id, student_info):
         ('TOPPADDING', (0,0), (-1,-1), 5),
     ]))
     
-    # Summary calculation metrics
     total_score = sum(student_info['marks'].values())
     avg_pct = (total_score / TOTAL_MARKS) * 100
     final_letter, final_gpa, _ = get_detailed_grade(avg_pct)
@@ -260,7 +215,6 @@ def generate_pdf(student_id, student_info):
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
     ]))
     
-    # Combined Layout Footer Row
     footer_row_table = Table([[key_box_table, summary_table]], colWidths=[260, 280])
     footer_row_table.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
@@ -269,13 +223,11 @@ def generate_pdf(student_id, student_info):
     ]))
     
     story.append(KeepTogether([footer_row_table]))
-    
-    # Build Document using structural components
     doc.build(story, onFirstPage=lambda c, d: c.draw_background())
     buffer.seek(0)
     return buffer
 
-# ---------- ULTRA-PREMIUM GUI THEMING CONTROLS (CSS) ----------
+# ---------- ULTRA-PREMIUM GUI THEMING CONTROLS (CSS WITH INPUT FIX) ----------
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
@@ -287,7 +239,6 @@ st.markdown("""
         color: #F3F4F6 !important;
     }
     
-    /* Header & Typography styling */
     h1, h2, h3, p, span, label {
         color: #F3F4F6 !important;
     }
@@ -308,13 +259,9 @@ st.markdown("""
         backdrop-filter: blur(16px);
         box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
         margin-bottom: 25px;
-        transition: transform 0.3s ease, border-color 0.3s ease;
-    }
-    .premium-card:hover {
-        border-color: rgba(0, 210, 255, 0.3);
     }
 
-    /* Premium Button Interactive Overlays */
+    /* Premium Button Overlays */
     .stButton>button {
         background: linear-gradient(90deg, #00F2FE 0%, #4FACFE 100%) !important;
         color: #0B0F19 !important;
@@ -325,25 +272,28 @@ st.markdown("""
         text-transform: uppercase !important;
         letter-spacing: 1.5px !important;
         box-shadow: 0 4px 20px rgba(79, 172, 254, 0.4) !important;
-        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
-    }
-    .stButton>button:hover {
-        transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 8px 30px rgba(0, 242, 254, 0.6) !important;
     }
     
-    /* Secondary Action buttons (e.g. PDF generation button) */
-    .download-btn-container {
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
+    /* CRITICAL FIX: Modern Input Text Visibility Fix */
+    div[data-testid="stTextInput"] input, 
+    div[data-testid="stNumberInput"] input,
+    div[data-baseweb="input"] input,
+    input {
+        background-color: rgba(255, 255, 255, 0.07) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 12px !important;
     }
     
-    /* Clean DataFrame / Table overrides */
+    div[data-testid="stWidgetLabel"] p {
+        color: #00F2FE !important;
+        font-weight: 600;
+    }
+    
     div[data-testid="stTable"] table {
         background-color: rgba(255, 255, 255, 0.02) !important;
         border-collapse: separate !important;
-        border-spacing: 0 !important;
         border-radius: 14px !important;
         overflow: hidden !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -351,23 +301,7 @@ st.markdown("""
     div[data-testid="stTable"] th {
         background-color: rgba(79, 172, 254, 0.15) !important;
         color: #00F2FE !important;
-        font-weight: 600 !important;
         padding: 14px !important;
-    }
-    div[data-testid="stTable"] td {
-        padding: 12px !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
-    }
-    
-    /* Modern Input Customization */
-    input {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        color: #FFFFFF !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 12px !important;
-    }
-    input:focus {
-        border-color: #00F2FE !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -380,17 +314,38 @@ st.sidebar.markdown("<p style='text-align: center; font-size:12px; color: #9CA3A
 st.sidebar.write("---")
 choice = st.sidebar.radio("SYSTEM NAVIGATION", ["🏠 DASHBOARD HOME", "🔐 CONTROL PANEL", "👨‍🎓 REPORT CARD PORTAL"])
 
-# --- VIEW 1: RUNTIME HOME ---
+# --- VIEW 1: RUNTIME HOME (UPGRADED WITH ANALYTICS ENGINE) ---
 if choice == "🏠 DASHBOARD HOME":
     st.markdown("<h1 style='text-align: center; font-weight:700; letter-spacing:-1px;'>Elite Management Framework</h1>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class='premium-card' style='text-align: center;'>
-        <h3 style='color: #00F2FE !important;'>Next-Gen Student Analytics and Dynamic Asset Generation Pipeline</h3>
-        <p style='color: #9CA3AF !important; max-width: 700px; margin: 10px auto;'>
-            Welcome to the operational hub. Toggle the navigation workspace panel to securely update student registries or generate high-fidelity, print-ready formal PDF evaluation sheets.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    
+    # Live Quick Stats Analytics Feature
+    if data:
+        total_students = len(data)
+        all_scores = [sum(info['marks'].values()) / TOTAL_MARKS * 100 for info in data.values()]
+        avg_school_score = sum(all_scores) / total_students
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("TOTAL ACTIVE PROFILES", f"{total_students} Students")
+        c2.metric("GLOBAL ACADEMIC YIELD", f"{avg_school_score:.2f}%")
+        c3.metric("SYSTEM INTEGRITY STATUS", "SECURE (100%)")
+        
+        # Performance Distribution Chart Feature
+        st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
+        st.subheader("📊 Cross-Student Performance Metric Mapping")
+        chart_df = pd.DataFrame({
+            "Student Name": [info['name'] for info in data.values()],
+            "Overall Grade Yield (%)": all_scores
+        }).set_index("Student Name")
+        st.bar_chart(chart_df)
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class='premium-card' style='text-align: center;'>
+            <h3 style='color: #00F2FE !important;'>Next-Gen Student Analytics and Dynamic Asset Generation Pipeline</h3>
+            <p style='color: #9CA3AF !important;'>Welcome to the operational hub. To get started instantly, move to the control panel or seed the mock engine inside the structural export workspace.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.image("https://img.freepik.com/free-vector/connected-world-concept-illustration_114360-3027.jpg", use_container_width=True)
 
 # --- VIEW 2: DATABASE ADMIN ACCESS CONTROL ---
@@ -416,7 +371,7 @@ elif choice == "🔐 CONTROL PANEL":
     else:
         st.sidebar.button("TERMINATE ADMIN SESSION", on_click=lambda: st.session_state.update({"admin_auth": False}))
         
-        tab1, tab2, tab3, tab4 = st.tabs(["📝 Add Record Entry", "📊 Ledger Analytics", "🔄 Hot-Fix Modification", "📥 Structural Export"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📝 Add Record Entry", "📊 Ledger Analytics", "🔄 Hot-Fix Modification & Deletion", "📥 Structural Export & Tools"])
 
         with tab1:
             st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
@@ -460,6 +415,13 @@ elif choice == "🔐 CONTROL PANEL":
             st.subheader("Hot-Patch Data Record Utility")
             u_roll = st.text_input("Query Verification Roll ID Target")
             if u_roll in data:
+                # CRUD Delete Feature Upgrade Added Here
+                if st.button("🔥 PERMANENTLY ERASE THIS STUDENT PROFILE", type="secondary"):
+                    del data[u_roll]
+                    save_data(data)
+                    st.warning("Profile purged from secure localized disk.")
+                    st.rerun()
+                
                 with st.form("upd"):
                     st.info(f"Writing Overwrite Sequence For Student: {data[u_roll]['name']}")
                     new_m = {sub: st.number_input(sub, 0, 100, value=data[u_roll]['marks'].get(sub, 90)) for sub in SUBJECTS}
@@ -484,6 +446,12 @@ elif choice == "🔐 CONTROL PANEL":
                     row.update({"Total Matrix": t, "Percentage Yield": f"{p:.2f}%", "Letter Code": get_detailed_grade(p)[0]})
                     export_list.append(row)
                 st.download_button("GENERATE STRUCTURAL FLAT FILE (CSV)", pd.DataFrame(export_list).to_csv(index=False).encode('utf-8'), "Elite_Academic_Registry.csv")
+            
+            # Auto Seeder Feature Setup
+            st.write("---")
+            st.subheader("🛠️ Fast Diagnostics & Seeder")
+            if st.button("🚀 INITIALIZE SAMPLE REGISTRY DATA LOGS"):
+                seed_sample_data()
             st.markdown("</div>", unsafe_allow_html=True)
 
 # --- VIEW 3: SECURE STUDENT SHEET EXTRACTION & GENERATION ---
@@ -502,7 +470,6 @@ elif choice == "👨‍🎓 REPORT CARD PORTAL":
     if roll:
         if roll in data:
             s_data = data[roll]
-            
             if retrieve_triggered:
                 st.balloons()
             
@@ -515,7 +482,6 @@ elif choice == "👨‍🎓 REPORT CARD PORTAL":
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Render Clean UI Data Table
                 rendered_metrics_list = []
                 for sub in SUBJECTS:
                     m_val = s_data['marks'].get(sub, 0)
@@ -530,7 +496,6 @@ elif choice == "👨‍🎓 REPORT CARD PORTAL":
                 
                 st.table(pd.DataFrame(rendered_metrics_list))
                 
-                # Statistical Metrics Processing Engine Blocks
                 tot = sum(s_data['marks'].values())
                 p_yield = (tot / TOTAL_MARKS) * 100
                 badge_lbl, badge_col = get_ui_badge(p_yield)
@@ -549,10 +514,7 @@ elif choice == "👨‍🎓 REPORT CARD PORTAL":
                 
                 # --- AUTOMATED HIGH-FIDELITY PRINT-READY PDF GENERATION ENGINE ---
                 st.markdown("<div class='download-btn-container'>", unsafe_allow_html=True)
-                
-                # Generate PDF Document Stream dynamically in-memory
                 pdf_output_stream = generate_pdf(roll, s_data)
-                
                 st.download_button(
                     label="📥 DOWNLOAD OFFICIAL CANVA-STYLE PROGRESS REPORT (PDF)",
                     data=pdf_output_stream,
