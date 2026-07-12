@@ -404,12 +404,13 @@ elif choice == "🛡️ Admin Panel":
                 json_data = json.dumps(data, indent=4).encode('utf-8')
                 st.download_button("📥 Download JSON Backup", data=json_data, file_name="students_backup.json")
 
-# ---------- PAGE 3: STUDENT RESULT (NEW PREMIUM MARK CARD DESIGN) ----------
+# ---------- PAGE 3: STUDENT RESULT (CRASH-PROOF HTML MARK CARD DESIGN) ----------
 elif choice == "📋 Student Result":
     st.subheader("📋 Student Result Portal")
     with st.container():
         st.markdown("<div class='premium-glass-card'>", unsafe_allow_html=True)
         roll = st.text_input("Enter your Roll Number", placeholder="e.g. 1001")
+        
         if st.button("🔍 Generate Report"):
             if roll in data:
                 s = data[roll]
@@ -417,8 +418,10 @@ elif choice == "📋 Student Result":
                 perc = (total/TOTAL_MARKS)*100
                 grade, gpa, _ = get_grade_gpa(perc)
                 
-                # ---------- 1. PIXEL-PERFECT CANVA WEB MARK CARD DESIGN ----------
-                st.markdown(f"""
+                # ---------------------------------------------------------
+                # 1. PIXEL-PERFECT CANVA WEB MARK CARD (FIXED HTML RENDERING)
+                # ---------------------------------------------------------
+                st.markdown("""
                 <div style="position: relative; background: #f5f0e6; border-radius: 20px; padding: 30px; margin-bottom: 20px; overflow: hidden; color: #333; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.2);">
                     <!-- Background Decorative Circles -->
                     <div style="position: absolute; top: -30px; left: -20px; width: 140px; height: 140px; background: #e0d7c8; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
@@ -430,7 +433,10 @@ elif choice == "📋 Student Result":
                         <h3 style="color: white; font-weight: 700; margin: 0;">Progress Report</h3>
                     </div>
                     <h5 style="position: relative; z-index: 1; color: #604227; text-align: center; margin-top: 10px; font-weight: 400;">Anderson Family Homeschool</h5>
+                """, unsafe_allow_html=True)
 
+                # Student Info Card (Dynamic Data)
+                st.markdown(f"""
                     <!-- Student Info Form -->
                     <div style="position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
                         <div>
@@ -462,7 +468,7 @@ elif choice == "📋 Student Result":
                         <div style="background: #f5f0e6; border: 1px solid #ccc; border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
                 """, unsafe_allow_html=True)
 
-                # Dynamic Rows
+                # Generate Dynamic Subject Rows
                 for sub in SUBJECTS:
                     mark = s['marks'].get(sub, 0)
                     perc_sub = (mark/100)*100
@@ -477,7 +483,7 @@ elif choice == "📋 Student Result":
                         </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown(f"""
+                st.markdown("""
                         </div>
                     </div>
 
@@ -503,7 +509,10 @@ elif choice == "📋 Student Result":
                             <div></div>
                         </div>
                     </div>
-                    
+                """, unsafe_allow_html=True)
+
+                # Footer (Total + Grade)
+                st.markdown(f"""
                     <div style="position: relative; z-index: 1; margin-top: 20px; display: flex; justify-content: space-between;">
                         <span style="font-size: 12px; font-weight: bold; color: #604227;">Total: {total} / {TOTAL_MARKS} | Percentage: {perc:.1f}%</span>
                         <span style="font-size: 12px; font-weight: bold; color: #c83c2f;">Letter Grade: {grade}</span>
@@ -553,8 +562,7 @@ elif choice == "📋 Student Result":
             else: 
                 st.markdown("<div class='alert-box error'>❌ Roll number not found!</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------- PAGE 4: STUDY PLAN (NEW FEATURE FROM IMAGE) ----------
+        # ---------- PAGE 4: STUDY PLAN (NEW FEATURE FROM IMAGE) ----------
 elif choice == "📚 Study Plan":
     st.subheader("📚 Personalized Study Planner")
     st.markdown("Plan your week like a pro with this Canva-inspired interactive scheduler.", unsafe_allow_html=True)
