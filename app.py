@@ -8,7 +8,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 
-# ------ PLOTLY IMPORT WITH ULTIMATE EXCEPTION HANDLING ------
+# ------ PLOTLY IMPORT ----------
 PLOTLY_AVAILABLE = False
 try:
     import plotly.graph_objects as go
@@ -16,19 +16,20 @@ try:
 except Exception:
     PLOTLY_AVAILABLE = False
 
-# ---------- CONFIGURATION & DATA CONSTANTS ----------
+# ---------- CONFIGURATION ----------
 FILE_NAME = "students.json"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "1234"
 SUBJECTS = ["English", "Urdu", "Math", "Science", "Sindhi", "Islamiyat", "Social Studies"]
 TOTAL_MARKS = 700
 
-# ---------- PREMIUM UI CONFIGURATION ----------
-st.set_page_config(page_title="Anderson Family Homeschool", page_icon="📘", layout="wide")
+# ---------- PREMIUM UI CONFIG ----------
+st.set_page_config(page_title="Elite Academy Suite", page_icon="📘", layout="wide")
 
 if 'dark_theme' not in st.session_state:
     st.session_state.dark_theme = True
 
+# Dynamic CSS
 theme_bg = "linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)" if st.session_state.dark_theme else "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)"
 text_color = "#ffffff" if st.session_state.dark_theme else "#1a1a1a"
 input_bg = "rgba(255, 255, 255, 0.15)" if st.session_state.dark_theme else "rgba(0, 0, 0, 0.05)"
@@ -40,7 +41,7 @@ st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Poppins:wght@400;600;700&display=swap');
     
-    .stApp, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp p, .stApp li, .stApp span:not(.brand-text) {{
+    .stApp, .stApp h1, .stApp h2, .stApp h3, .stApp p, .stApp li, .stApp span:not(.brand-text) {{
         color: {text_color} !important;
         font-family: 'Inter', sans-serif;
     }}
@@ -51,13 +52,11 @@ st.markdown(f"""
         background-size: 400% 400%;
         animation: gradientShift 15s ease infinite;
     }}
-    
     @keyframes gradientShift {{
         0% {{ background-position: 0% 50%; }}
         50% {{ background-position: 100% 50%; }}
         100% {{ background-position: 0% 50%; }}
     }}
-
     ::-webkit-scrollbar {{ width: 8px; }}
     ::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
     ::-webkit-scrollbar-thumb {{ background: #7a4c34; border-radius: 10px; }}
@@ -158,13 +157,12 @@ def get_grade_gpa(percentage):
     elif percentage >= 60: return "D-", "0.7/4.0", "60% to 62%"
     else: return "F", "0.0/4.0", "0% to 59%"
 
-# ---------- 100% FIXED CANVA STYLE PDF GENERATION (NO OVERLAP) ----------
+# ---------- EXACT CANVA PDF GENERATION ----------
 def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     
-    # Exact Canva Colors
     brown_dark = colors.HexColor('#604227')
     brown_brand = colors.HexColor('#7a4c34')
     red_brand = colors.HexColor('#c83c2f')
@@ -174,7 +172,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.setFillColor(cream_bg)
     c.rect(0, 0, width, height, fill=1, stroke=0)
     
-    # Overlapping Circles
     c.setFillColor(colors.HexColor('#e0d7c8'))
     c.circle(70, height - 60, 50, stroke=0, fill=1)
     c.setFillColor(colors.HexColor('#d4c8b6'))
@@ -184,7 +181,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.circle(145, height - 80, 45, stroke=0, fill=1)
     c.setFillAlpha(1)
 
-    # Header
     c.setFillColor(brown_brand)
     c.roundRect((width - 250) / 2, height - 90, 250, 55, 10, fill=1, stroke=0)
     c.setFillColor(colors.white)
@@ -194,7 +190,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.setFont("Helvetica", 12)
     c.drawCentredString(width/2, height - 120, "Anderson Family Homeschool")
 
-    # Student Info
     x_margin = 50
     c.setFillColor(red_brand)
     c.setFont("Helvetica-Bold", 11)
@@ -217,7 +212,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.drawString(x_margin + 305, height - 175, date_today)
     c.drawString(x_margin + 305, height - 210, "Faculty (Auto-Generated)")
 
-    # Data Table
     table_x, table_y, table_w = x_margin, height - 240, 495
     row_h = 22
     
@@ -230,7 +224,6 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.drawString(table_x + 315, table_y + 10, "Course Grade")
     c.drawString(table_x + 385, table_y + 10, "Teacher's Remarks")
     
-    # Loop table rows
     current_y = table_y - row_h
     for subject in SUBJECTS:
         mark = marks_dict.get(subject, 0)
@@ -251,15 +244,9 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
         c.drawString(table_x + 260, current_y + 6, "1")
         c.drawString(table_x + 335, current_y + 6, grade)
         c.drawString(table_x + 400, current_y + 6, remark)
-        
         current_y -= row_h
-
-    # ---------- FIX: GRADING KEY (COMPLETE SEPARATION & ZERO OVERLAP) ----------
-    key_x = x_margin
-    key_y = current_y - 40  # Fixed 40px margin below the last table row
-    key_h = 115
     
-    # Brown Box (Grading Key Label)
+    key_x, key_y, key_h = x_margin, current_y - 30, 115
     c.setFillColor(brown_brand)
     c.rect(key_x, key_y, 130, key_h, fill=1, stroke=0)
     c.setFillColor(colors.white)
@@ -267,35 +254,28 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.drawCentredString(key_x + 65, key_y + 55, "GRADING")
     c.drawCentredString(key_x + 65, key_y + 40, "KEY")
     
-    # Beige Background Box
     c.setFillColor(cream_light)
     c.setFillAlpha(0.8)
     c.rect(key_x + 130, key_y, 365, key_h, fill=1, stroke=0)
     c.setFillAlpha(1)
-    
-    # Grading Text
     c.setFillColor(brown_dark)
     c.setFont("Helvetica", 8)
-    g_y = key_y + 95
     
-    # LEFT COLUMN
-    c.drawString(key_x + 140, g_y,      "A = 93% to 100% | 4.0/4.0")
+    g_y = key_y + 95
+    c.drawString(key_x + 140, g_y, "A = 93% to 100% | 4.0/4.0")
     c.drawString(key_x + 140, g_y - 12, "A- = 90% to 92% | 3.7/4.0")
     c.drawString(key_x + 140, g_y - 24, "B+ = 87% to 89% | 3.3/4.0")
     c.drawString(key_x + 140, g_y - 36, "B  = 83% to 86% | 3.0/4.0")
     c.drawString(key_x + 140, g_y - 48, "B- = 80% to 82% | 2.7/4.0")
     c.drawString(key_x + 140, g_y - 60, "C+ = 77% to 79% | 2.3/4.0")
     c.drawString(key_x + 140, g_y - 72, "C  = 73% to 76% | 2.0/4.0")
-    
-    # RIGHT COLUMN
-    c.drawString(key_x + 280, g_y,      "C- = 70% to 72% | 1.7/4.0")
+    c.drawString(key_x + 280, g_y,     "C- = 70% to 72% | 1.7/4.0")
     c.drawString(key_x + 280, g_y - 12, "D+ = 67% to 69% | 1.3/4.0")
     c.drawString(key_x + 280, g_y - 24, "D  = 63% to 66% | 1.0/4.0")
     c.drawString(key_x + 280, g_y - 36, "D- = 60% to 62% | 0.7/4.0")
     c.drawString(key_x + 280, g_y - 48, "F  = 0% to 59% | 0.0/4.0")
     c.drawString(key_x + 280, g_y - 60, "I  = Incomplete")
 
-    # Footer
     footer_y, footer_h = 0, 45
     c.setFillColor(brown_brand)
     c.rect(0, footer_y, width, footer_h, fill=1, stroke=0)
@@ -322,13 +302,13 @@ with st.sidebar:
     st.markdown("<h3 style='text-align:center; color:#c83c2f;'>📘 ELITE</h3>", unsafe_allow_html=True)
     st.markdown("<hr>", unsafe_allow_html=True)
     st.session_state.dark_theme = st.toggle("🌙 Dark Mode", value=st.session_state.dark_theme)
-    choice = st.radio("Navigation", ["🏠 Home", "🛡️ Admin Panel", "📋 Student Result"])
+    choice = st.radio("Navigation", ["🏠 Home", "🛡️ Admin Panel", "📋 Student Result", "📚 Study Plan"])
     st.markdown(f"<p style='font-size:12px; opacity:0.6;'>Active Students: <b>{len(data)}</b></p>", unsafe_allow_html=True)
 
 # ---------- PAGE 1: HOME ----------
 if choice == "🏠 Home":
     st.markdown("<h1 style='font-family:Poppins;'>Anderson Family <br><span class='brand-text'>Homeschool Management</span></h1>", unsafe_allow_html=True)
-    st.markdown("<div class='premium-glass-card'><h4>🚀 Next-Gen Portal</h4>Select 'Admin Panel' to enroll students or 'Student Result' for Canva-grade PDF report cards instantly.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='premium-glass-card'><h4>🚀 Next-Gen Portal</h4>Complete ecosystem for tracking academic results, daily study plans, and PDF generation.</div>", unsafe_allow_html=True)
 
 # ---------- PAGE 2: ADMIN ----------
 elif choice == "🛡️ Admin Panel":
@@ -371,7 +351,20 @@ elif choice == "🛡️ Admin Panel":
                 
                 if st.form_submit_button("Add Record"):
                     if r and n:
-                        data[r] = {"name": n, "class": cl, "marks": marks, "date": str(datetime.now().date())}
+                        # Ensure Study Plan is initialized for new student
+                        data[r] = {
+                            "name": n, 
+                            "class": cl, 
+                            "marks": marks, 
+                            "date": str(datetime.now().date()),
+                            "study_plan": {
+                                "mon": ["", "", "", "", ""],
+                                "tue": ["", "", "", "", ""],
+                                "wed": ["", "", "", "", ""],
+                                "thu": ["", "", "", "", ""],
+                                "fri": ["", "", "", "", ""]
+                            }
+                        }
                         save_data(data)
                         st.markdown("<div class='alert-box'>✅ Record Saved!</div>", unsafe_allow_html=True)
                         st.rerun()
@@ -411,7 +404,7 @@ elif choice == "🛡️ Admin Panel":
                 json_data = json.dumps(data, indent=4).encode('utf-8')
                 st.download_button("📥 Download JSON Backup", data=json_data, file_name="students_backup.json")
 
-# ---------- PAGE 3: STUDENT ----------
+# ---------- PAGE 3: STUDENT RESULT (NEW PREMIUM MARK CARD DESIGN) ----------
 elif choice == "📋 Student Result":
     st.subheader("📋 Student Result Portal")
     with st.container():
@@ -424,13 +417,101 @@ elif choice == "📋 Student Result":
                 perc = (total/TOTAL_MARKS)*100
                 grade, gpa, _ = get_grade_gpa(perc)
                 
+                # ---------- 1. PIXEL-PERFECT CANVA WEB MARK CARD DESIGN ----------
                 st.markdown(f"""
-                <div style='display:flex; justify-content:space-between; border-bottom: 2px solid #c83c2f; padding-bottom: 10px; margin-bottom: 20px;'>
-                    <div><h2 style='margin:0;'>{s['name']}</h2><p style='color:#c83c2f;'>Roll: {roll} | Class: {s['class']}</p></div>
-                    <div><p style='font-size:32px; margin:0; color:#c83c2f; font-weight:bold;'>{grade}</p></div>
+                <div style="position: relative; background: #f5f0e6; border-radius: 20px; padding: 30px; margin-bottom: 20px; overflow: hidden; color: #333; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.2);">
+                    <!-- Background Decorative Circles -->
+                    <div style="position: absolute; top: -30px; left: -20px; width: 140px; height: 140px; background: #e0d7c8; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
+                    <div style="position: absolute; top: -80px; right: -40px; width: 200px; height: 200px; background: #d4c8b6; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
+                    <div style="position: absolute; top: -20px; left: 100px; width: 90px; height: 90px; background: #e8d6d0; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
+                    
+                    <!-- Header -->
+                    <div style="position: relative; z-index: 1; background: #7a4c34; width: 100%; max-width: 280px; margin: 0 auto; border-radius: 12px; padding: 15px 0; text-align: center;">
+                        <h3 style="color: white; font-weight: 700; margin: 0;">Progress Report</h3>
+                    </div>
+                    <h5 style="position: relative; z-index: 1; color: #604227; text-align: center; margin-top: 10px; font-weight: 400;">Anderson Family Homeschool</h5>
+
+                    <!-- Student Info Form -->
+                    <div style="position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                        <div>
+                            <label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Student Name:</label>
+                            <div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['name']}</div>
+                        </div>
+                        <div>
+                            <label style="color: #c83c2f; font-weight: 700; font-size: 14px;">School Year:</label>
+                            <div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{datetime.now().strftime('%Y-%m-%d')}</div>
+                        </div>
+                        <div>
+                            <label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Grade:</label>
+                            <div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['class']}</div>
+                        </div>
+                        <div>
+                            <label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Teacher:</label>
+                            <div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">Faculty (Auto-Generated)</div>
+                        </div>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div style="position: relative; z-index: 1; margin-top: 25px;">
+                        <div style="background: #7a4c34; color: white; padding: 8px 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
+                            <span style="flex: 2;">Course Title</span>
+                            <span style="flex: 1; text-align: center;">No. of Units</span>
+                            <span style="flex: 1; text-align: center;">Course Grade</span>
+                            <span style="flex: 1.5; text-align: center;">Teacher's Remarks</span>
+                        </div>
+                        <div style="background: #f5f0e6; border: 1px solid #ccc; border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+                """, unsafe_allow_html=True)
+
+                # Dynamic Rows
+                for sub in SUBJECTS:
+                    mark = s['marks'].get(sub, 0)
+                    perc_sub = (mark/100)*100
+                    grade_sub, _, _ = get_grade_gpa(perc_sub)
+                    remark = "Excellent" if perc_sub>=90 else "Good" if perc_sub>=80 else "Satisfactory" if perc_sub>=70 else "Needs Improvement"
+                    st.markdown(f"""
+                        <div style="display: flex; justify-content: space-between; padding: 6px 15px; border-bottom: 1px solid #e0d7c8;">
+                            <span style="flex: 2; color: #c83c2f; font-weight: 500;">{sub}</span>
+                            <span style="flex: 1; text-align: center; color: #333;">1</span>
+                            <span style="flex: 1; text-align: center; color: #333;">{grade_sub}</span>
+                            <span style="flex: 1.5; text-align: center; color: #333;">{remark}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                st.markdown(f"""
+                        </div>
+                    </div>
+
+                    <!-- Grading Key -->
+                    <div style="position: relative; z-index: 1; display: flex; margin-top: 20px; background: #eae2d7; border-radius: 8px;">
+                        <div style="background: #7a4c34; color: white; width: 90px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; border-top-left-radius: 8px; border-bottom-left-radius: 8px; text-align: center;">
+                            GRADING<br>KEY
+                        </div>
+                        <div style="flex: 1; padding: 10px 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 15px; font-size: 11px; color: #604227;">
+                            <div>A = 93% to 100% | 4.0/4.0</div>
+                            <div>C- = 70% to 72% | 1.7/4.0</div>
+                            <div>A- = 90% to 92% | 3.7/4.0</div>
+                            <div>D+ = 67% to 69% | 1.3/4.0</div>
+                            <div>B+ = 87% to 89% | 3.3/4.0</div>
+                            <div>D  = 63% to 66% | 1.0/4.0</div>
+                            <div>B  = 83% to 86% | 3.0/4.0</div>
+                            <div>D- = 60% to 62% | 0.7/4.0</div>
+                            <div>B- = 80% to 82% | 2.7/4.0</div>
+                            <div>F  = 0% to 59% | 0.0/4.0</div>
+                            <div>C+ = 77% to 79% | 2.3/4.0</div>
+                            <div>I  = Incomplete</div>
+                            <div>C  = 73% to 76% | 2.0/4.0</div>
+                            <div></div>
+                        </div>
+                    </div>
+                    
+                    <div style="position: relative; z-index: 1; margin-top: 20px; display: flex; justify-content: space-between;">
+                        <span style="font-size: 12px; font-weight: bold; color: #604227;">Total: {total} / {TOTAL_MARKS} | Percentage: {perc:.1f}%</span>
+                        <span style="font-size: 12px; font-weight: bold; color: #c83c2f;">Letter Grade: {grade}</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # ---------- 2. DATA TABLE AND RADAR CHART ----------
                 df = pd.DataFrame(list(s['marks'].items()), columns=["Subject", "Marks"])
                 df["Percentage"] = (df["Marks"]/100*100).round(1)
                 df["Grade"] = df["Percentage"].apply(lambda x: get_grade_gpa(x)[0])
@@ -438,7 +519,6 @@ elif choice == "📋 Student Result":
                 c1, c2 = st.columns([3, 2])
                 with c1:
                     st.dataframe(df, use_container_width=True)
-                    st.metric("Grand Total", f"{total} / {TOTAL_MARKS}")
                     st.metric("GPA (4.0 Scale)", gpa)
                 
                 with c2:
@@ -465,10 +545,106 @@ elif choice == "📋 Student Result":
                     else:
                         st.info("📊 Upgrade for interactive Radar Chart! Run `pip install plotly` in your terminal.")
                 
+                # ---------- 3. PDF DOWNLOAD ----------
                 with st.spinner("Generating Premium PDF..."):
                     pdf = generate_pdf_report(roll, s['name'], s['class'], s['marks'], str(datetime.now().date()))
                     st.download_button("📥 Download Official Progress Report (PDF)", data=pdf, file_name=f"{s['name']}_{roll}_Report.pdf")
                 
             else: 
                 st.markdown("<div class='alert-box error'>❌ Roll number not found!</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------- PAGE 4: STUDY PLAN (NEW FEATURE FROM IMAGE) ----------
+elif choice == "📚 Study Plan":
+    st.subheader("📚 Personalized Study Planner")
+    st.markdown("Plan your week like a pro with this Canva-inspired interactive scheduler.", unsafe_allow_html=True)
+    
+    with st.container():
+        st.markdown("<div class='premium-glass-card'>", unsafe_allow_html=True)
+        plan_roll = st.text_input("Enter your Roll Number to manage Study Plan", placeholder="e.g. 1001")
+        
+        if plan_roll and plan_roll in data:
+            s = data[plan_roll]
+            
+            # Initialize study plan if missing (backward compatibility)
+            if 'study_plan' not in s:
+                s['study_plan'] = {
+                    "mon": ["", "", "", "", ""],
+                    "tue": ["", "", "", "", ""],
+                    "wed": ["", "", "", "", ""],
+                    "thu": ["", "", "", "", ""],
+                    "fri": ["", "", "", "", ""]
+                }
+                data[plan_roll] = s
+                save_data(data)
+            
+            # Load current plan
+            plan = s['study_plan']
+            days = ["mon", "tue", "wed", "thu", "fri"]
+            day_labels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+            
+            st.markdown(f"<h4 style='color: #c83c2f;'>Study Plan for: {s['name']}</h4>", unsafe_allow_html=True)
+            
+            with st.form("study_plan_form"):
+                # Create a dynamic grid using columns
+                cols = st.columns(6)
+                cols[0].markdown("**Time**")
+                for i, day in enumerate(day_labels):
+                    cols[i+1].markdown(f"**{day}**")
+                
+                # 5 rows of time slots
+                default_times = ["08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "12:00 - 13:00"]
+                row_inputs = []
+                
+                for row in range(5):
+                    row_cols = st.columns(6)
+                    # Time Input
+                    time_val = row_cols[0].text_input(f"time_{row}", value=default_times[row], key=f"t_{row}", label_visibility="collapsed")
+                    
+                    row_data = {"time": time_val}
+                    for idx, d in enumerate(days):
+                        # Load existing text or empty
+                        val = plan[d][row] if row < len(plan[d]) else ""
+                        inp = row_cols[idx+1].text_input(f"{d}_{row}", value=val, key=f"ip_{d}_{row}", label_visibility="collapsed")
+                        row_data[d] = inp
+                    
+                    row_inputs.append(row_data)
+                
+                # Lunch/Noon row (Row 6)
+                st.markdown("---")
+                noon_cols = st.columns(6)
+                noon_cols[0].markdown("**NOON**")
+                for i in range(5):
+                    noon_cols[i+1].markdown("**LUNCH**")
+                st.markdown("---")
+                
+                # Last 2 rows (Row 7 & 8)
+                for row in range(5, 7):
+                    row_cols = st.columns(6)
+                    time_val = row_cols[0].text_input(f"time_{row}", value="13:00 - 14:00", key=f"t_{row}", label_visibility="collapsed")
+                    
+                    row_data = {"time": time_val}
+                    for idx, d in enumerate(days):
+                        val = plan[d][row] if row < len(plan[d]) else ""
+                        inp = row_cols[idx+1].text_input(f"{d}_{row}", value=val, key=f"ip_{d}_{row}", label_visibility="collapsed")
+                        row_data[d] = inp
+                    row_inputs.append(row_data)
+
+                submitted = st.form_submit_button("💾 Save Study Plan")
+                
+                if submitted:
+                    # Save data back to dict
+                    new_plan = {d: [] for d in days}
+                    for row_data in row_inputs:
+                        for d in days:
+                            new_plan[d].append(row_data[d])
+                    
+                    data[plan_roll]['study_plan'] = new_plan
+                    save_data(data)
+                    st.markdown("<div class='alert-box'>✅ Study Plan updated successfully!</div>", unsafe_allow_html=True)
+                    st.rerun()
+
+        elif plan_roll:
+            st.markdown("<div class='alert-box error'>❌ Roll number not found. Please verify and try again.</div>", unsafe_allow_html=True)
+        
         st.markdown("</div>", unsafe_allow_html=True)
