@@ -8,13 +8,12 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 
-# ------ PLOTLY IMPORT WITH ULTIMATE EXCEPTION HANDLING (CRASH FIX) ------
+# ------ PLOTLY IMPORT WITH ULTIMATE EXCEPTION HANDLING ------
 PLOTLY_AVAILABLE = False
 try:
     import plotly.graph_objects as go
     PLOTLY_AVAILABLE = True
 except Exception:
-    # CATCHES ImportError, TypeError, AttributeError, or any deep dependency failure!
     PLOTLY_AVAILABLE = False
 
 # ---------- CONFIGURATION & DATA CONSTANTS ----------
@@ -30,7 +29,6 @@ st.set_page_config(page_title="Anderson Family Homeschool", page_icon="📘", la
 if 'dark_theme' not in st.session_state:
     st.session_state.dark_theme = True
 
-# Dynamic Theme Variables
 theme_bg = "linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)" if st.session_state.dark_theme else "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)"
 text_color = "#ffffff" if st.session_state.dark_theme else "#1a1a1a"
 input_bg = "rgba(255, 255, 255, 0.15)" if st.session_state.dark_theme else "rgba(0, 0, 0, 0.05)"
@@ -42,14 +40,11 @@ st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Poppins:wght@400;600;700&display=swap');
     
-    /* ---------- GLOBAL FONT & CONTRAST FIX ---------- */
     .stApp, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp p, .stApp li, .stApp span:not(.brand-text) {{
         color: {text_color} !important;
         font-family: 'Inter', sans-serif;
     }}
-    .brand-text {{
-        color: #c83c2f !important;
-    }}
+    .brand-text {{ color: #c83c2f !important; }}
     
     .stApp {{
         background: {theme_bg};
@@ -163,12 +158,13 @@ def get_grade_gpa(percentage):
     elif percentage >= 60: return "D-", "0.7/4.0", "60% to 62%"
     else: return "F", "0.0/4.0", "0% to 59%"
 
-# ---------- CANVA STYLE PDF GENERATION ----------
+# ---------- 100% FIXED CANVA STYLE PDF GENERATION (NO OVERLAP) ----------
 def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     
+    # Exact Canva Colors
     brown_dark = colors.HexColor('#604227')
     brown_brand = colors.HexColor('#7a4c34')
     red_brand = colors.HexColor('#c83c2f')
@@ -178,6 +174,7 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.setFillColor(cream_bg)
     c.rect(0, 0, width, height, fill=1, stroke=0)
     
+    # Overlapping Circles
     c.setFillColor(colors.HexColor('#e0d7c8'))
     c.circle(70, height - 60, 50, stroke=0, fill=1)
     c.setFillColor(colors.HexColor('#d4c8b6'))
@@ -187,6 +184,7 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.circle(145, height - 80, 45, stroke=0, fill=1)
     c.setFillAlpha(1)
 
+    # Header
     c.setFillColor(brown_brand)
     c.roundRect((width - 250) / 2, height - 90, 250, 55, 10, fill=1, stroke=0)
     c.setFillColor(colors.white)
@@ -196,6 +194,7 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.setFont("Helvetica", 12)
     c.drawCentredString(width/2, height - 120, "Anderson Family Homeschool")
 
+    # Student Info
     x_margin = 50
     c.setFillColor(red_brand)
     c.setFont("Helvetica-Bold", 11)
@@ -218,6 +217,7 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.drawString(x_margin + 305, height - 175, date_today)
     c.drawString(x_margin + 305, height - 210, "Faculty (Auto-Generated)")
 
+    # Data Table
     table_x, table_y, table_w = x_margin, height - 240, 495
     row_h = 22
     
@@ -230,6 +230,7 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.drawString(table_x + 315, table_y + 10, "Course Grade")
     c.drawString(table_x + 385, table_y + 10, "Teacher's Remarks")
     
+    # Loop table rows
     current_y = table_y - row_h
     for subject in SUBJECTS:
         mark = marks_dict.get(subject, 0)
@@ -250,9 +251,15 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
         c.drawString(table_x + 260, current_y + 6, "1")
         c.drawString(table_x + 335, current_y + 6, grade)
         c.drawString(table_x + 400, current_y + 6, remark)
+        
         current_y -= row_h
+
+    # ---------- FIX: GRADING KEY (COMPLETE SEPARATION & ZERO OVERLAP) ----------
+    key_x = x_margin
+    key_y = current_y - 40  # Fixed 40px margin below the last table row
+    key_h = 115
     
-    key_x, key_y, key_h = x_margin, current_y - 30, 115
+    # Brown Box (Grading Key Label)
     c.setFillColor(brown_brand)
     c.rect(key_x, key_y, 130, key_h, fill=1, stroke=0)
     c.setFillColor(colors.white)
@@ -260,28 +267,35 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.drawCentredString(key_x + 65, key_y + 55, "GRADING")
     c.drawCentredString(key_x + 65, key_y + 40, "KEY")
     
+    # Beige Background Box
     c.setFillColor(cream_light)
     c.setFillAlpha(0.8)
     c.rect(key_x + 130, key_y, 365, key_h, fill=1, stroke=0)
     c.setFillAlpha(1)
+    
+    # Grading Text
     c.setFillColor(brown_dark)
     c.setFont("Helvetica", 8)
-    
     g_y = key_y + 95
-    c.drawString(key_x + 140, g_y, "A = 93% to 100% | 4.0/4.0")
+    
+    # LEFT COLUMN
+    c.drawString(key_x + 140, g_y,      "A = 93% to 100% | 4.0/4.0")
     c.drawString(key_x + 140, g_y - 12, "A- = 90% to 92% | 3.7/4.0")
     c.drawString(key_x + 140, g_y - 24, "B+ = 87% to 89% | 3.3/4.0")
     c.drawString(key_x + 140, g_y - 36, "B  = 83% to 86% | 3.0/4.0")
     c.drawString(key_x + 140, g_y - 48, "B- = 80% to 82% | 2.7/4.0")
     c.drawString(key_x + 140, g_y - 60, "C+ = 77% to 79% | 2.3/4.0")
     c.drawString(key_x + 140, g_y - 72, "C  = 73% to 76% | 2.0/4.0")
-    c.drawString(key_x + 280, g_y,     "C- = 70% to 72% | 1.7/4.0")
+    
+    # RIGHT COLUMN
+    c.drawString(key_x + 280, g_y,      "C- = 70% to 72% | 1.7/4.0")
     c.drawString(key_x + 280, g_y - 12, "D+ = 67% to 69% | 1.3/4.0")
     c.drawString(key_x + 280, g_y - 24, "D  = 63% to 66% | 1.0/4.0")
     c.drawString(key_x + 280, g_y - 36, "D- = 60% to 62% | 0.7/4.0")
     c.drawString(key_x + 280, g_y - 48, "F  = 0% to 59% | 0.0/4.0")
     c.drawString(key_x + 280, g_y - 60, "I  = Incomplete")
 
+    # Footer
     footer_y, footer_h = 0, 45
     c.setFillColor(brown_brand)
     c.rect(0, footer_y, width, footer_h, fill=1, stroke=0)
