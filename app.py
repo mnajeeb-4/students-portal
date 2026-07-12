@@ -404,7 +404,7 @@ elif choice == "🛡️ Admin Panel":
                 json_data = json.dumps(data, indent=4).encode('utf-8')
                 st.download_button("📥 Download JSON Backup", data=json_data, file_name="students_backup.json")
 
-# ---------- PAGE 3: STUDENT RESULT (CRASH-PROOF HTML MARK CARD DESIGN) ----------
+# ---------- PAGE 3: STUDENT RESULT (SINGLE-VARIABLE HTML FORMATTING) ----------
 elif choice == "📋 Student Result":
     st.subheader("📋 Student Result Portal")
     with st.container():
@@ -419,9 +419,9 @@ elif choice == "📋 Student Result":
                 grade, gpa, _ = get_grade_gpa(perc)
                 
                 # ---------------------------------------------------------
-                # 1. PIXEL-PERFECT CANVA WEB MARK CARD (FIXED HTML RENDERING)
+                # 1. BUILD ENTIRE HTML CARD AS ONE VARIABLE (CRASH FIX)
                 # ---------------------------------------------------------
-                st.markdown("""
+                html_content = f"""
                 <div style="position: relative; background: #f5f0e6; border-radius: 20px; padding: 30px; margin-bottom: 20px; overflow: hidden; color: #333; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.2);">
                     <!-- Background Decorative Circles -->
                     <div style="position: absolute; top: -30px; left: -20px; width: 140px; height: 140px; background: #e0d7c8; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
@@ -433,10 +433,7 @@ elif choice == "📋 Student Result":
                         <h3 style="color: white; font-weight: 700; margin: 0;">Progress Report</h3>
                     </div>
                     <h5 style="position: relative; z-index: 1; color: #604227; text-align: center; margin-top: 10px; font-weight: 400;">Anderson Family Homeschool</h5>
-                """, unsafe_allow_html=True)
 
-                # Student Info Card (Dynamic Data)
-                st.markdown(f"""
                     <!-- Student Info Form -->
                     <div style="position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
                         <div>
@@ -457,7 +454,7 @@ elif choice == "📋 Student Result":
                         </div>
                     </div>
 
-                    <!-- Data Table -->
+                    <!-- Data Table Start -->
                     <div style="position: relative; z-index: 1; margin-top: 25px;">
                         <div style="background: #7a4c34; color: white; padding: 8px 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
                             <span style="flex: 2;">Course Title</span>
@@ -466,24 +463,26 @@ elif choice == "📋 Student Result":
                             <span style="flex: 1.5; text-align: center;">Teacher's Remarks</span>
                         </div>
                         <div style="background: #f5f0e6; border: 1px solid #ccc; border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
-                """, unsafe_allow_html=True)
+                """
 
-                # Generate Dynamic Subject Rows
+                # Dynamic Subject Rows (Loop appended to string safely)
                 for sub in SUBJECTS:
                     mark = s['marks'].get(sub, 0)
                     perc_sub = (mark/100)*100
                     grade_sub, _, _ = get_grade_gpa(perc_sub)
                     remark = "Excellent" if perc_sub>=90 else "Good" if perc_sub>=80 else "Satisfactory" if perc_sub>=70 else "Needs Improvement"
-                    st.markdown(f"""
-                        <div style="display: flex; justify-content: space-between; padding: 6px 15px; border-bottom: 1px solid #e0d7c8;">
-                            <span style="flex: 2; color: #c83c2f; font-weight: 500;">{sub}</span>
-                            <span style="flex: 1; text-align: center; color: #333;">1</span>
-                            <span style="flex: 1; text-align: center; color: #333;">{grade_sub}</span>
-                            <span style="flex: 1.5; text-align: center; color: #333;">{remark}</span>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    
+                    html_content += f"""
+                            <div style="display: flex; justify-content: space-between; padding: 6px 15px; border-bottom: 1px solid #e0d7c8;">
+                                <span style="flex: 2; color: #c83c2f; font-weight: 500;">{sub}</span>
+                                <span style="flex: 1; text-align: center; color: #333;">1</span>
+                                <span style="flex: 1; text-align: center; color: #333;">{grade_sub}</span>
+                                <span style="flex: 1.5; text-align: center; color: #333;">{remark}</span>
+                            </div>
+                    """
 
-                st.markdown("""
+                # Grading Key
+                html_content += """
                         </div>
                     </div>
 
@@ -509,16 +508,19 @@ elif choice == "📋 Student Result":
                             <div></div>
                         </div>
                     </div>
-                """, unsafe_allow_html=True)
+                """
 
                 # Footer (Total + Grade)
-                st.markdown(f"""
+                html_content += f"""
                     <div style="position: relative; z-index: 1; margin-top: 20px; display: flex; justify-content: space-between;">
                         <span style="font-size: 12px; font-weight: bold; color: #604227;">Total: {total} / {TOTAL_MARKS} | Percentage: {perc:.1f}%</span>
                         <span style="font-size: 12px; font-weight: bold; color: #c83c2f;">Letter Grade: {grade}</span>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """
+
+                # SINGLE SAFE RENDER - NO RAW HTML TEXT!
+                st.markdown(html_content, unsafe_allow_html=True)
                 
                 # ---------- 2. DATA TABLE AND RADAR CHART ----------
                 df = pd.DataFrame(list(s['marks'].items()), columns=["Subject", "Marks"])
