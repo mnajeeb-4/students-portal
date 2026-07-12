@@ -404,7 +404,7 @@ elif choice == "🛡️ Admin Panel":
                 json_data = json.dumps(data, indent=4).encode('utf-8')
                 st.download_button("📥 Download JSON Backup", data=json_data, file_name="students_backup.json")
 
-# ---------- PAGE 3: STUDENT RESULT (SINGLE-VARIABLE HTML FORMATTING) ----------
+# ---------- PAGE 3: STUDENT RESULT (ULTIMATE SAFEGUARD) ----------
 elif choice == "📋 Student Result":
     st.subheader("📋 Student Result Portal")
     with st.container():
@@ -418,9 +418,9 @@ elif choice == "📋 Student Result":
                 perc = (total/TOTAL_MARKS)*100
                 grade, gpa, _ = get_grade_gpa(perc)
                 
-                # ---------------------------------------------------------
-                # 1. BUILD ENTIRE HTML CARD AS ONE VARIABLE (CRASH FIX)
-                # ---------------------------------------------------------
+                # =====================================================================
+                # 1. BUILD THE COMPLETE HTML CARD (PURE STRING CONCATENATION)
+                # =====================================================================
                 html_content = f"""
                 <div style="position: relative; background: #f5f0e6; border-radius: 20px; padding: 30px; margin-bottom: 20px; overflow: hidden; color: #333; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.2);">
                     <!-- Background Decorative Circles -->
@@ -465,7 +465,9 @@ elif choice == "📋 Student Result":
                         <div style="background: #f5f0e6; border: 1px solid #ccc; border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
                 """
 
-                # Dynamic Subject Rows (Loop appended to string safely)
+                # =====================================================================
+                # 2. APPEND ROWS SAFELY TO STRING
+                # =====================================================================
                 for sub in SUBJECTS:
                     mark = s['marks'].get(sub, 0)
                     perc_sub = (mark/100)*100
@@ -481,7 +483,9 @@ elif choice == "📋 Student Result":
                             </div>
                     """
 
-                # Grading Key
+                # =====================================================================
+                # 3. APPEND GRADING KEY & FOOTER
+                # =====================================================================
                 html_content += """
                         </div>
                     </div>
@@ -510,7 +514,9 @@ elif choice == "📋 Student Result":
                     </div>
                 """
 
-                # Footer (Total + Grade)
+                # =====================================================================
+                # 4. APPEND FOOTER
+                # =====================================================================
                 html_content += f"""
                     <div style="position: relative; z-index: 1; margin-top: 20px; display: flex; justify-content: space-between;">
                         <span style="font-size: 12px; font-weight: bold; color: #604227;">Total: {total} / {TOTAL_MARKS} | Percentage: {perc:.1f}%</span>
@@ -519,10 +525,12 @@ elif choice == "📋 Student Result":
                 </div>
                 """
 
-                # SINGLE SAFE RENDER - NO RAW HTML TEXT!
-                st.markdown(html_content, unsafe_allow_html=True)
+                # =====================================================================
+                # 5. CRITICAL RENDER STEP (DO NOT USE st.write OR st.code HERE!)
+                # =====================================================================
+                st.markdown(html_content, unsafe_allow_html=True) 
                 
-                # ---------- 2. DATA TABLE AND RADAR CHART ----------
+                # ---------- DATA TABLE AND RADAR CHART ----------
                 df = pd.DataFrame(list(s['marks'].items()), columns=["Subject", "Marks"])
                 df["Percentage"] = (df["Marks"]/100*100).round(1)
                 df["Grade"] = df["Percentage"].apply(lambda x: get_grade_gpa(x)[0])
@@ -556,7 +564,7 @@ elif choice == "📋 Student Result":
                     else:
                         st.info("📊 Upgrade for interactive Radar Chart! Run `pip install plotly` in your terminal.")
                 
-                # ---------- 3. PDF DOWNLOAD ----------
+                # ---------- PDF DOWNLOAD ----------
                 with st.spinner("Generating Premium PDF..."):
                     pdf = generate_pdf_report(roll, s['name'], s['class'], s['marks'], str(datetime.now().date()))
                     st.download_button("📥 Download Official Progress Report (PDF)", data=pdf, file_name=f"{s['name']}_{roll}_Report.pdf")
