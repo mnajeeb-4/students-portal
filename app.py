@@ -419,7 +419,7 @@ elif choice == "🛡️ Admin Panel":
                 json_data = json.dumps(data, indent=4).encode('utf-8')
                 st.download_button("📥 Download JSON Backup", data=json_data, file_name="students_backup.json")
 
-# ---------- PAGE 3: STUDENT RESULT (RAW HTML BUG COMPLETELY FIXED) ----------
+# ---------- PAGE 3: STUDENT RESULT (100% COMMENT-FREE HTML) ----------
 elif choice == "📋 Student Result":
     st.subheader("📋 Student Result Portal")
     with st.container():
@@ -461,7 +461,7 @@ elif choice == "📋 Student Result":
                             st.warning("Please take or upload a picture first.")
 
                 # =====================================================================
-                # 1. PREMIUM HTML CANVA CARD BUILD (SINGLE STRING)
+                # 1. PREMIUM HTML CANVA CARD BUILD (ALL COMMENTS REMOVED)
                 # =====================================================================
                 # Handle image embedding in HTML
                 img_html = ""
@@ -470,19 +470,16 @@ elif choice == "📋 Student Result":
 
                 html_content = f"""
                 <div style="position: relative; background: #f5f0e6; border-radius: 20px; padding: 30px; margin-bottom: 20px; overflow: hidden; color: #333; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.2); min-height: 400px;">
-                    <!-- Background Decor -->
                     <div style="position: absolute; top: -30px; left: -20px; width: 140px; height: 140px; background: #e0d7c8; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
                     <div style="position: absolute; top: -80px; right: -40px; width: 200px; height: 200px; background: #d4c8b6; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
                     
                     {img_html}
                     
-                    <!-- Header -->
                     <div style="position: relative; z-index: 1; background: #7a4c34; width: 100%; max-width: 280px; margin: 0 auto; border-radius: 12px; padding: 15px 0; text-align: center;">
                         <h3 style="color: white; font-weight: 700; margin: 0;">Progress Report</h3>
                     </div>
                     <h5 style="position: relative; z-index: 1; color: #604227; text-align: center; margin-top: 10px; font-weight: 400;">Anderson Family Homeschool</h5>
 
-                    <!-- Student Form -->
                     <div style="position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
                         <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Student Name:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['name']}</div></div>
                         <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">School Year:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{datetime.now().strftime('%Y-%m-%d')}</div></div>
@@ -490,7 +487,6 @@ elif choice == "📋 Student Result":
                         <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Teacher:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">Faculty (Auto-Generated)</div></div>
                     </div>
 
-                    <!-- Data Table -->
                     <div style="position: relative; z-index: 1; margin-top: 25px;">
                         <div style="background: #7a4c34; color: white; padding: 8px 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
                             <span style="flex: 2;">Course Title</span>
@@ -517,7 +513,6 @@ elif choice == "📋 Student Result":
                         </div>
                     </div>
 
-                    <!-- Grading Key -->
                     <div style="position: relative; z-index: 1; display: flex; margin-top: 20px; background: #eae2d7; border-radius: 8px;">
                         <div style="background: #7a4c34; color: white; width: 90px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; border-top-left-radius: 8px; border-bottom-left-radius: 8px; text-align: center;">GRADING<br>KEY</div>
                         <div style="flex: 1; padding: 10px 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 15px; font-size: 11px; color: #604227;">
@@ -540,7 +535,7 @@ elif choice == "📋 Student Result":
                 """
                 
                 # =====================================================================
-                # ⚠️ CRITICAL RENDER LINE: DO NOT USE st.write(html_content) OR st.code(html_content)!
+                # CRITICAL LINE: ONLY st.markdown WITH unsafe_allow_html=True WORKS
                 # =====================================================================
                 st.markdown(html_content, unsafe_allow_html=True)
 
