@@ -1,14 +1,17 @@
 import streamlit as st
 import json
 import os
+import base64
 import pandas as pd
 from datetime import datetime
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.platypus import Table, TableStyle
 
-# ------ PLOTLY IMPORT WITH ULTIMATE EXCEPTION HANDLING ------
+# ------ PLOTLY IMPORT ------
 PLOTLY_AVAILABLE = False
 try:
     import plotly.graph_objects as go
@@ -16,15 +19,15 @@ try:
 except Exception:
     PLOTLY_AVAILABLE = False
 
-# ---------- CONFIGURATION & DATA CONSTANTS ----------
+# ---------- CONFIGURATION ----------
 FILE_NAME = "students.json"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "1234"
 SUBJECTS = ["English", "Urdu", "Math", "Science", "Sindhi", "Islamiyat", "Social Studies"]
 TOTAL_MARKS = 700
 
-# ---------- PREMIUM UI CONFIGURATION ----------
-st.set_page_config(page_title="Anderson Family Homeschool", page_icon="📘", layout="wide")
+# ---------- PREMIUM UI CONFIG ----------
+st.set_page_config(page_title="Elite Academy", page_icon="📘", layout="wide")
 
 if 'dark_theme' not in st.session_state:
     st.session_state.dark_theme = True
@@ -40,7 +43,7 @@ st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Poppins:wght@400;600;700&display=swap');
     
-    .stApp, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp p, .stApp li, .stApp span:not(.brand-text) {{
+    .stApp, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp p, .stApp li, .stApp span:not(.brand-text) {{
         color: {text_color} !important;
         font-family: 'Inter', sans-serif;
     }}
@@ -58,10 +61,6 @@ st.markdown(f"""
         100% {{ background-position: 0% 50%; }}
     }}
 
-    ::-webkit-scrollbar {{ width: 8px; }}
-    ::-webkit-scrollbar-track {{ background: rgba(255, 255, 255, 0.05); border-radius: 10px; }}
-    ::-webkit-scrollbar-thumb {{ background: #7a4c34; border-radius: 10px; }}
-
     [data-testid="stSidebar"] {{
         background: rgba(255, 255, 255, 0.05) !important;
         backdrop-filter: blur(20px) !important;
@@ -75,10 +74,11 @@ st.markdown(f"""
         padding: 10px 15px !important;
         backdrop-filter: blur(5px);
         transition: 0.3s ease;
+        box-shadow: 0 0 0px transparent;
     }}
     div[data-testid="stTextInput"] input:focus, div[data-testid="stNumberInput"] input:focus {{
         border-color: #c83c2f !important;
-        box-shadow: 0 0 20px rgba(200, 60, 47, 0.3);
+        box-shadow: 0 0 25px rgba(200, 60, 47, 0.4) !important;
     }}
     
     .premium-glass-card {{
@@ -89,9 +89,13 @@ st.markdown(f"""
         padding: 25px;
         margin-bottom: 20px;
         box-shadow: 0 10px 40px {shadow_color};
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
     }}
-    .premium-glass-card:hover {{ transform: translateY(-5px); box-shadow: 0 20px 60px {shadow_color}; }}
+    .premium-glass-card:hover {{ 
+        transform: translateY(-5px); 
+        box-shadow: 0 20px 60px {shadow_color}; 
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }}
 
     div.stButton > button {{
         background: linear-gradient(135deg, #7a4c34 0%, #c83c2f 100%) !important;
@@ -113,7 +117,10 @@ st.markdown(f"""
         padding: 20px;
         text-align: center;
         border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 10px;
+        transition: 0.3s;
     }}
+    .metric-card:hover {{ background: rgba(255,255,255,0.1); border-color: #c83c2f; }}
     .metric-card h3 {{ margin:0; color:#c83c2f; font-size:12px; letter-spacing:2px; text-transform:uppercase; }}
     .metric-card h2 {{ margin:0; font-size:38px; font-weight:700; }}
 
@@ -145,8 +152,8 @@ def save_data(data):
         json.dump(data, file, indent=4)
 
 def get_grade_gpa(percentage):
-    if percentage >= 93: return "A", "4.0/4.0", "93% to 100%"
-    elif percentage >= 90: return "A-", "3.7/4.0", "90% to 92%"
+    if percentage >= 93: return "A+", "4.0/4.0", "93% to 100%"
+    elif percentage >= 90: return "A", "3.7/4.0", "90% to 92%"
     elif percentage >= 87: return "B+", "3.3/4.0", "87% to 89%"
     elif percentage >= 83: return "B", "3.0/4.0", "83% to 86%"
     elif percentage >= 80: return "B-", "2.7/4.0", "80% to 82%"
@@ -158,23 +165,23 @@ def get_grade_gpa(percentage):
     elif percentage >= 60: return "D-", "0.7/4.0", "60% to 62%"
     else: return "F", "0.0/4.0", "0% to 59%"
 
-# ---------- 100% FIXED CANVA STYLE PDF GENERATION (NO OVERLAP) ----------
-def generate_pdf_report(roll, name, cls, marks_dict, date_today):
+# ---------- PROFESSIONAL CANVA PDF WITH PROFILE PIC & TABLE ----------
+def generate_pdf_report(roll, name, cls, marks_dict, date_today, profile_pic_base64=None):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     
-    # Exact Canva Colors
     brown_dark = colors.HexColor('#604227')
     brown_brand = colors.HexColor('#7a4c34')
     red_brand = colors.HexColor('#c83c2f')
     cream_bg = colors.HexColor('#f5f0e6')
     cream_light = colors.HexColor('#eae2d7')
     
+    # 1. Background Circles & Beige Base
     c.setFillColor(cream_bg)
     c.rect(0, 0, width, height, fill=1, stroke=0)
     
-    # Overlapping Circles
+    # Decorative Circles
     c.setFillColor(colors.HexColor('#e0d7c8'))
     c.circle(70, height - 60, 50, stroke=0, fill=1)
     c.setFillColor(colors.HexColor('#d4c8b6'))
@@ -184,7 +191,19 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.circle(145, height - 80, 45, stroke=0, fill=1)
     c.setFillAlpha(1)
 
-    # Header
+    # 2. Profile Picture (Top-Left, Professional Frame)
+    if profile_pic_base64:
+        try:
+            img_bytes = base64.b64decode(profile_pic_base64)
+            img_buffer = io.BytesIO(img_bytes)
+            # Draw a circular frame using a brown circle behind the image
+            c.setFillColor(colors.HexColor('#7a4c34'))
+            c.circle(100, height - 110, 55, stroke=0, fill=1)
+            c.drawImage(img_buffer, 55, height - 155, width=90, height=90, mask='auto')
+        except Exception:
+            pass # If image fails, just skip it
+
+    # 3. Header Banner (Centered)
     c.setFillColor(brown_brand)
     c.roundRect((width - 250) / 2, height - 90, 250, 55, 10, fill=1, stroke=0)
     c.setFillColor(colors.white)
@@ -194,112 +213,101 @@ def generate_pdf_report(roll, name, cls, marks_dict, date_today):
     c.setFont("Helvetica", 12)
     c.drawCentredString(width/2, height - 120, "Anderson Family Homeschool")
 
-    # Student Info
+    # 4. Student Info Section (Properly Aligned Left)
     x_margin = 50
+    info_y = height - 160
     c.setFillColor(red_brand)
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(x_margin, height - 160, "Student Name:")
-    c.drawString(x_margin, height - 195, "Grade:")
-    c.drawString(x_margin + 300, height - 160, "School Year:")
-    c.drawString(x_margin + 300, height - 195, "Teacher:")
+    
+    c.drawString(x_margin, info_y, "Student Name:")
+    c.drawString(x_margin, info_y - 35, "Grade:")
+    c.drawString(x_margin + 300, info_y, "School Year:")
+    c.drawString(x_margin + 300, info_y - 35, "Teacher:")
     
     c.setStrokeColor(colors.grey)
     c.setLineWidth(0.8)
-    c.line(x_margin, height - 170, x_margin + 250, height - 170)
-    c.line(x_margin, height - 205, x_margin + 250, height - 205)
-    c.line(x_margin + 300, height - 170, x_margin + 520, height - 170)
-    c.line(x_margin + 300, height - 205, x_margin + 520, height - 205)
+    # Draw lines
+    c.line(x_margin, info_y - 10, x_margin + 250, info_y - 10)
+    c.line(x_margin, info_y - 45, x_margin + 250, info_y - 45)
+    c.line(x_margin + 300, info_y - 10, x_margin + 520, info_y - 10)
+    c.line(x_margin + 300, info_y - 45, x_margin + 520, info_y - 45)
     
+    # Fill text
     c.setFillColor(brown_dark)
     c.setFont("Helvetica", 12)
-    c.drawString(x_margin + 5, height - 175, name)
-    c.drawString(x_margin + 5, height - 210, cls)
-    c.drawString(x_margin + 305, height - 175, date_today)
-    c.drawString(x_margin + 305, height - 210, "Faculty (Auto-Generated)")
+    c.drawString(x_margin + 5, info_y - 15, name)
+    c.drawString(x_margin + 5, info_y - 50, cls)
+    c.drawString(x_margin + 305, info_y - 15, date_today)
+    c.drawString(x_margin + 305, info_y - 50, "Faculty (Auto-Generated)")
 
-    # Data Table
-    table_x, table_y, table_w = x_margin, height - 240, 495
-    row_h = 22
+    # 5. Subjects Table (Using ReportLab Platypus Table for perfection)
+    table_y = height - 240
+    table_data = [
+        ["Course Title", "No. of Units", "Course Grade", "Teacher's Remarks"]
+    ]
     
-    c.setFillColor(brown_brand)
-    c.rect(table_x, table_y, table_w, 30, fill=1, stroke=0)
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(table_x + 10, table_y + 10, "Course Title")
-    c.drawString(table_x + 235, table_y + 10, "No. of Units")
-    c.drawString(table_x + 315, table_y + 10, "Course Grade")
-    c.drawString(table_x + 385, table_y + 10, "Teacher's Remarks")
-    
-    # Loop table rows
-    current_y = table_y - row_h
     for subject in SUBJECTS:
         mark = marks_dict.get(subject, 0)
         perc_sub = (mark / 100) * 100 if mark else 0 
         grade, _, _ = get_grade_gpa(perc_sub)
         remark = "Excellent" if perc_sub>=90 else "Good" if perc_sub>=80 else "Satisfactory" if perc_sub>=70 else "Needs Improvement"
-        
-        c.setFillColor(colors.white)
-        c.setFillAlpha(0.1)
-        c.rect(table_x, current_y, table_w, row_h, fill=1, stroke=0)
-        c.setFillAlpha(1)
-        
-        c.setFillColor(red_brand)
-        c.setFont("Helvetica", 10)
-        c.drawString(table_x + 10, current_y + 6, subject)
-        
-        c.setFillColor(brown_dark)
-        c.drawString(table_x + 260, current_y + 6, "1")
-        c.drawString(table_x + 335, current_y + 6, grade)
-        c.drawString(table_x + 400, current_y + 6, remark)
-        
-        current_y -= row_h
+        table_data.append([subject, "1", grade, remark])
 
-    # ---------- FIX: GRADING KEY (COMPLETE SEPARATION & ZERO OVERLAP) ----------
-    key_x = x_margin
-    key_y = current_y - 40  # Fixed 40px margin below the last table row
-    key_h = 115
-    
-    # Brown Box (Grading Key Label)
+    t = Table(table_data, colWidths=[220, 75, 75, 110])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), brown_brand),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+    ]))
+    # Draw Table on Canvas
+    w, h = t.wrap(0, 0)
+    t.drawOn(c, x_margin, table_y - h)
+
+    # 6. Grading Key (Brown Box + Beige Box, properly placed below table)
+    current_y = table_y - h - 40
+    key_h = 110
     c.setFillColor(brown_brand)
-    c.rect(key_x, key_y, 130, key_h, fill=1, stroke=0)
+    c.rect(x_margin, current_y - key_h, 130, key_h, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 12)
-    c.drawCentredString(key_x + 65, key_y + 55, "GRADING")
-    c.drawCentredString(key_x + 65, key_y + 40, "KEY")
+    c.drawCentredString(x_margin + 65, current_y - key_h + 55, "GRADING")
+    c.drawCentredString(x_margin + 65, current_y - key_h + 40, "KEY")
     
-    # Beige Background Box
     c.setFillColor(cream_light)
     c.setFillAlpha(0.8)
-    c.rect(key_x + 130, key_y, 365, key_h, fill=1, stroke=0)
+    c.rect(x_margin + 130, current_y - key_h, 365, key_h, fill=1, stroke=0)
     c.setFillAlpha(1)
-    
-    # Grading Text
     c.setFillColor(brown_dark)
     c.setFont("Helvetica", 8)
-    g_y = key_y + 95
     
-    # LEFT COLUMN
-    c.drawString(key_x + 140, g_y,      "A = 93% to 100% | 4.0/4.0")
-    c.drawString(key_x + 140, g_y - 12, "A- = 90% to 92% | 3.7/4.0")
-    c.drawString(key_x + 140, g_y - 24, "B+ = 87% to 89% | 3.3/4.0")
-    c.drawString(key_x + 140, g_y - 36, "B  = 83% to 86% | 3.0/4.0")
-    c.drawString(key_x + 140, g_y - 48, "B- = 80% to 82% | 2.7/4.0")
-    c.drawString(key_x + 140, g_y - 60, "C+ = 77% to 79% | 2.3/4.0")
-    c.drawString(key_x + 140, g_y - 72, "C  = 73% to 76% | 2.0/4.0")
-    
-    # RIGHT COLUMN
-    c.drawString(key_x + 280, g_y,      "C- = 70% to 72% | 1.7/4.0")
-    c.drawString(key_x + 280, g_y - 12, "D+ = 67% to 69% | 1.3/4.0")
-    c.drawString(key_x + 280, g_y - 24, "D  = 63% to 66% | 1.0/4.0")
-    c.drawString(key_x + 280, g_y - 36, "D- = 60% to 62% | 0.7/4.0")
-    c.drawString(key_x + 280, g_y - 48, "F  = 0% to 59% | 0.0/4.0")
-    c.drawString(key_x + 280, g_y - 60, "I  = Incomplete")
+    g_y = current_y - key_h + 95
+    # Left Column
+    c.drawString(x_margin + 140, g_y, "A+ = 93% to 100% | 4.0/4.0")
+    c.drawString(x_margin + 140, g_y - 12, "A = 90% to 92% | 3.7/4.0")
+    c.drawString(x_margin + 140, g_y - 24, "B+ = 87% to 89% | 3.3/4.0")
+    c.drawString(x_margin + 140, g_y - 36, "B  = 83% to 86% | 3.0/4.0")
+    c.drawString(x_margin + 140, g_y - 48, "B- = 80% to 82% | 2.7/4.0")
+    c.drawString(x_margin + 140, g_y - 60, "C+ = 77% to 79% | 2.3/4.0")
+    c.drawString(x_margin + 140, g_y - 72, "C  = 73% to 76% | 2.0/4.0")
+    # Right Column
+    c.drawString(x_margin + 280, g_y, "C- = 70% to 72% | 1.7/4.0")
+    c.drawString(x_margin + 280, g_y - 12, "D+ = 67% to 69% | 1.3/4.0")
+    c.drawString(x_margin + 280, g_y - 24, "D  = 63% to 66% | 1.0/4.0")
+    c.drawString(x_margin + 280, g_y - 36, "D- = 60% to 62% | 0.7/4.0")
+    c.drawString(x_margin + 280, g_y - 48, "F  = 0% to 59% | 0.0/4.0")
+    c.drawString(x_margin + 280, g_y - 60, "I  = Incomplete")
 
-    # Footer
-    footer_y, footer_h = 0, 45
+    # 7. Footer (Quarter Boxes)
+    footer_y = 0
     c.setFillColor(brown_brand)
-    c.rect(0, footer_y, width, footer_h, fill=1, stroke=0)
-    
+    c.rect(0, footer_y, width, 45, fill=1, stroke=0)
     quarters = ["Quarter One", "Quarter Two", "Quarter Three", "Quarter Four"]
     for i, q in enumerate(quarters):
         box_x = 40 + (i * 125)
@@ -328,7 +336,7 @@ with st.sidebar:
 # ---------- PAGE 1: HOME ----------
 if choice == "🏠 Home":
     st.markdown("<h1 style='font-family:Poppins;'>Anderson Family <br><span class='brand-text'>Homeschool Management</span></h1>", unsafe_allow_html=True)
-    st.markdown("<div class='premium-glass-card'><h4>🚀 Next-Gen Portal</h4>Select 'Admin Panel' to enroll students or 'Student Result' for Canva-grade PDF report cards instantly.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='premium-glass-card'><h4>🚀 Next-Gen Portal</h4>Premium Glassmorphism UI with integrated Profile Picture & Report Generation.</div>", unsafe_allow_html=True)
 
 # ---------- PAGE 2: ADMIN ----------
 elif choice == "🛡️ Admin Panel":
@@ -411,12 +419,13 @@ elif choice == "🛡️ Admin Panel":
                 json_data = json.dumps(data, indent=4).encode('utf-8')
                 st.download_button("📥 Download JSON Backup", data=json_data, file_name="students_backup.json")
 
-# ---------- PAGE 3: STUDENT ----------
+# ---------- PAGE 3: STUDENT RESULT (PROFILE PIC + TABLE FIX) ----------
 elif choice == "📋 Student Result":
     st.subheader("📋 Student Result Portal")
     with st.container():
         st.markdown("<div class='premium-glass-card'>", unsafe_allow_html=True)
         roll = st.text_input("Enter your Roll Number", placeholder="e.g. 1001")
+        
         if st.button("🔍 Generate Report"):
             if roll in data:
                 s = data[roll]
@@ -424,13 +433,115 @@ elif choice == "📋 Student Result":
                 perc = (total/TOTAL_MARKS)*100
                 grade, gpa, _ = get_grade_gpa(perc)
                 
-                st.markdown(f"""
-                <div style='display:flex; justify-content:space-between; border-bottom: 2px solid #c83c2f; padding-bottom: 10px; margin-bottom: 20px;'>
-                    <div><h2 style='margin:0;'>{s['name']}</h2><p style='color:#c83c2f;'>Roll: {roll} | Class: {s['class']}</p></div>
-                    <div><p style='font-size:32px; margin:0; color:#c83c2f; font-weight:bold;'>{grade}</p></div>
-                </div>
-                """, unsafe_allow_html=True)
+                # --- PROFILE PICTURE SECTION (NEW FEATURE) ---
+                st.markdown("### 📸 Profile Picture")
+                current_pic = s.get('profile_pic', None)
                 
+                col_pic1, col_pic2 = st.columns([1, 2])
+                with col_pic1:
+                    if current_pic:
+                        st.image(f"data:image/jpeg;base64,{current_pic}", width=150, caption="Current Photo")
+                
+                with col_pic2:
+                    img_file = st.camera_input("Take a picture (or upload below)")
+                    if img_file is None:
+                        img_file = st.file_uploader("Upload a photo instead", type=['jpg', 'jpeg', 'png'])
+                    
+                    if st.button("💾 Update Profile Picture"):
+                        if img_file is not None:
+                            # Read file and convert to base64
+                            bytes_data = img_file.getvalue()
+                            base64_str = base64.b64encode(bytes_data).decode('utf-8')
+                            s['profile_pic'] = base64_str
+                            data[roll] = s
+                            save_data(data)
+                            st.success("Profile picture updated successfully!")
+                            st.rerun()
+                        else:
+                            st.warning("Please take or upload a picture first.")
+
+                # =====================================================================
+                # 1. PREMIUM HTML CANVA CARD WITH PROFILE PIC IMG TAG
+                # =====================================================================
+                # Handle image embedding in HTML
+                img_html = ""
+                if current_pic:
+                    img_html = f'<img src="data:image/jpeg;base64,{current_pic}" style="width:90px;height:90px;border-radius:50%;border:3px solid #7a4c34;position:absolute;top:20px;right:20px;z-index:2;object-fit:cover;" />'
+
+                html_content = f"""
+                <div style="position: relative; background: #f5f0e6; border-radius: 20px; padding: 30px; margin-bottom: 20px; overflow: hidden; color: #333; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.2); min-height: 400px;">
+                    <!-- Background Decor -->
+                    <div style="position: absolute; top: -30px; left: -20px; width: 140px; height: 140px; background: #e0d7c8; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
+                    <div style="position: absolute; top: -80px; right: -40px; width: 200px; height: 200px; background: #d4c8b6; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
+                    
+                    {img_html}
+                    
+                    <!-- Header -->
+                    <div style="position: relative; z-index: 1; background: #7a4c34; width: 100%; max-width: 280px; margin: 0 auto; border-radius: 12px; padding: 15px 0; text-align: center;">
+                        <h3 style="color: white; font-weight: 700; margin: 0;">Progress Report</h3>
+                    </div>
+                    <h5 style="position: relative; z-index: 1; color: #604227; text-align: center; margin-top: 10px; font-weight: 400;">Anderson Family Homeschool</h5>
+
+                    <!-- Student Form -->
+                    <div style="position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                        <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Student Name:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['name']}</div></div>
+                        <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">School Year:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{datetime.now().strftime('%Y-%m-%d')}</div></div>
+                        <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Grade:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['class']}</div></div>
+                        <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Teacher:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">Faculty (Auto-Generated)</div></div>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div style="position: relative; z-index: 1; margin-top: 25px;">
+                        <div style="background: #7a4c34; color: white; padding: 8px 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
+                            <span style="flex: 2;">Course Title</span>
+                            <span style="flex: 1; text-align: center;">No. of Units</span>
+                            <span style="flex: 1; text-align: center;">Course Grade</span>
+                            <span style="flex: 1.5; text-align: center;">Teacher's Remarks</span>
+                        </div>
+                        <div style="background: #f5f0e6; border: 1px solid #ccc; border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+                """
+                for sub in SUBJECTS:
+                    mark = s['marks'].get(sub, 0)
+                    perc_sub = (mark/100)*100
+                    grade_sub, _, _ = get_grade_gpa(perc_sub)
+                    remark = "Excellent" if perc_sub>=90 else "Good" if perc_sub>=80 else "Satisfactory" if perc_sub>=70 else "Needs Improvement"
+                    html_content += f"""
+                            <div style="display: flex; justify-content: space-between; padding: 6px 15px; border-bottom: 1px solid #e0d7c8;">
+                                <span style="flex: 2; color: #c83c2f; font-weight: 500;">{sub}</span>
+                                <span style="flex: 1; text-align: center; color: #333;">1</span>
+                                <span style="flex: 1; text-align: center; color: #333;">{grade_sub}</span>
+                                <span style="flex: 1.5; text-align: center; color: #333;">{remark}</span>
+                            </div>
+                    """
+                html_content += """
+                        </div>
+                    </div>
+
+                    <!-- Grading Key -->
+                    <div style="position: relative; z-index: 1; display: flex; margin-top: 20px; background: #eae2d7; border-radius: 8px;">
+                        <div style="background: #7a4c34; color: white; width: 90px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; border-top-left-radius: 8px; border-bottom-left-radius: 8px; text-align: center;">GRADING<br>KEY</div>
+                        <div style="flex: 1; padding: 10px 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 15px; font-size: 11px; color: #604227;">
+                            <div>A = 93% to 100% | 4.0/4.0</div><div>C- = 70% to 72% | 1.7/4.0</div>
+                            <div>A- = 90% to 92% | 3.7/4.0</div><div>D+ = 67% to 69% | 1.3/4.0</div>
+                            <div>B+ = 87% to 89% | 3.3/4.0</div><div>D  = 63% to 66% | 1.0/4.0</div>
+                            <div>B  = 83% to 86% | 3.0/4.0</div><div>D- = 60% to 62% | 0.7/4.0</div>
+                            <div>B- = 80% to 82% | 2.7/4.0</div><div>F  = 0% to 59% | 0.0/4.0</div>
+                            <div>C+ = 77% to 79% | 2.3/4.0</div><div>I  = Incomplete</div>
+                            <div>C  = 73% to 76% | 2.0/4.0</div><div></div>
+                        </div>
+                    </div>
+                """
+                html_content += f"""
+                    <div style="position: relative; z-index: 1; margin-top: 20px; display: flex; justify-content: space-between;">
+                        <span style="font-size: 12px; font-weight: bold; color: #604227;">Total: {total} / {TOTAL_MARKS} | Percentage: {perc:.1f}%</span>
+                        <span style="font-size: 12px; font-weight: bold; color: #c83c2f;">Letter Grade: {grade}</span>
+                    </div>
+                </div>
+                """
+                # Display HTML
+                st.markdown(html_content, unsafe_allow_html=True)
+
+                # ---------- 2. DATA TABLE & CHART ----------
                 df = pd.DataFrame(list(s['marks'].items()), columns=["Subject", "Marks"])
                 df["Percentage"] = (df["Marks"]/100*100).round(1)
                 df["Grade"] = df["Percentage"].apply(lambda x: get_grade_gpa(x)[0])
@@ -438,7 +549,6 @@ elif choice == "📋 Student Result":
                 c1, c2 = st.columns([3, 2])
                 with c1:
                     st.dataframe(df, use_container_width=True)
-                    st.metric("Grand Total", f"{total} / {TOTAL_MARKS}")
                     st.metric("GPA (4.0 Scale)", gpa)
                 
                 with c2:
@@ -465,9 +575,20 @@ elif choice == "📋 Student Result":
                     else:
                         st.info("📊 Upgrade for interactive Radar Chart! Run `pip install plotly` in your terminal.")
                 
-                with st.spinner("Generating Premium PDF..."):
-                    pdf = generate_pdf_report(roll, s['name'], s['class'], s['marks'], str(datetime.now().date()))
-                    st.download_button("📥 Download Official Progress Report (PDF)", data=pdf, file_name=f"{s['name']}_{roll}_Report.pdf")
+                # ---------- 3. NEW FEATURE: WEAKNESS ANALYZER ----------
+                st.markdown("### 🧠 Weakness Analyzer")
+                sorted_subjects = df.sort_values(by="Marks")
+                weak_subjects = sorted_subjects.head(2)
+                
+                st.markdown("<div class='alert-box info'>💡 Based on your scores, you should focus more on these subjects:</div>", unsafe_allow_html=True)
+                for idx, row in weak_subjects.iterrows():
+                    st.markdown(f"<div style='background: rgba(255, 255, 255, 0.05); padding: 5px 10px; border-left: 3px solid #e74c3c; margin-bottom: 5px; border-radius: 4px; color: {text_color};'>🔴 <b>{row['Subject']}</b> (Marks: {row['Marks']})</div>", unsafe_allow_html=True)
+
+                # ---------- 4. PDF GENERATION WITH PROFILE PIC ----------
+                if st.button("📥 Download Official Progress Report (PDF)"):
+                    with st.spinner("Generating Premium PDF..."):
+                        pdf = generate_pdf_report(roll, s['name'], s['class'], s['marks'], str(datetime.now().date()), s.get('profile_pic', None))
+                        st.download_button("✅ Click to Download PDF", data=pdf, file_name=f"{s['name']}_{roll}_Report.pdf")
                 
             else: 
                 st.markdown("<div class='alert-box error'>❌ Roll number not found!</div>", unsafe_allow_html=True)
