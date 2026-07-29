@@ -419,7 +419,7 @@ elif choice == "🛡️ Admin Panel":
                 json_data = json.dumps(data, indent=4).encode('utf-8')
                 st.download_button("📥 Download JSON Backup", data=json_data, file_name="students_backup.json")
 
-# ---------- PAGE 3: STUDENT RESULT (PROFILE PIC + TABLE FIX) ----------
+# ---------- PAGE 3: STUDENT RESULT (RAW HTML BUG COMPLETELY FIXED) ----------
 elif choice == "📋 Student Result":
     st.subheader("📋 Student Result Portal")
     with st.container():
@@ -433,7 +433,7 @@ elif choice == "📋 Student Result":
                 perc = (total/TOTAL_MARKS)*100
                 grade, gpa, _ = get_grade_gpa(perc)
                 
-                # --- PROFILE PICTURE SECTION (NEW FEATURE) ---
+                # --- PROFILE PICTURE SECTION ---
                 st.markdown("### 📸 Profile Picture")
                 current_pic = s.get('profile_pic', None)
                 
@@ -449,7 +449,7 @@ elif choice == "📋 Student Result":
                     
                     if st.button("💾 Update Profile Picture"):
                         if img_file is not None:
-                            # Read file and convert to base64
+                            import base64
                             bytes_data = img_file.getvalue()
                             base64_str = base64.b64encode(bytes_data).decode('utf-8')
                             s['profile_pic'] = base64_str
@@ -461,7 +461,7 @@ elif choice == "📋 Student Result":
                             st.warning("Please take or upload a picture first.")
 
                 # =====================================================================
-                # 1. PREMIUM HTML CANVA CARD WITH PROFILE PIC IMG TAG
+                # 1. PREMIUM HTML CANVA CARD BUILD (SINGLE STRING)
                 # =====================================================================
                 # Handle image embedding in HTML
                 img_html = ""
@@ -538,7 +538,10 @@ elif choice == "📋 Student Result":
                     </div>
                 </div>
                 """
-                # Display HTML
+                
+                # =====================================================================
+                # ⚠️ CRITICAL RENDER LINE: DO NOT USE st.write(html_content) OR st.code(html_content)!
+                # =====================================================================
                 st.markdown(html_content, unsafe_allow_html=True)
 
                 # ---------- 2. DATA TABLE & CHART ----------
@@ -575,7 +578,7 @@ elif choice == "📋 Student Result":
                     else:
                         st.info("📊 Upgrade for interactive Radar Chart! Run `pip install plotly` in your terminal.")
                 
-                # ---------- 3. NEW FEATURE: WEAKNESS ANALYZER ----------
+                # ---------- 3. WEAKNESS ANALYZER ----------
                 st.markdown("### 🧠 Weakness Analyzer")
                 sorted_subjects = df.sort_values(by="Marks")
                 weak_subjects = sorted_subjects.head(2)
