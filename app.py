@@ -433,9 +433,17 @@ elif choice == "📋 Student Result":
                 perc = (total/TOTAL_MARKS)*100
                 grade, gpa, _ = get_grade_gpa(perc)
                 
-                # --- PROFILE PICTURE SECTION ---
+                # --- PROFILE PICTURE SECTION (NO RESTART, SESSION STATE PREVIEW) ---
                 st.markdown("### 📸 Profile Picture")
+                
+                # Trick to store temporary image preview so it doesn't require app restart
+                if 'temp_pic' not in st.session_state:
+                    st.session_state.temp_pic = None
+
                 current_pic = s.get('profile_pic', None)
+                # If a new picture was just uploaded, show it instantly from session state
+                if st.session_state.temp_pic:
+                    current_pic = st.session_state.temp_pic
                 
                 col_pic1, col_pic2 = st.columns([1, 2])
                 with col_pic1:
@@ -455,8 +463,10 @@ elif choice == "📋 Student Result":
                             s['profile_pic'] = base64_str
                             data[roll] = s
                             save_data(data)
-                            st.success("Profile picture updated successfully!")
-                            st.rerun()
+                            # Store in session state for instant UI update without reloading
+                            st.session_state.temp_pic = base64_str
+                            # Show success message without restarting (st.rerun removed!)
+                            st.success("✅ Profile picture updated successfully! (Page did not restart)")
                         else:
                             st.warning("Please take or upload a picture first.")
 
@@ -534,9 +544,7 @@ elif choice == "📋 Student Result":
                 </div>
                 """
                 
-                # =====================================================================
-                # CRITICAL LINE: ONLY st.markdown WITH unsafe_allow_html=True WORKS
-                # =====================================================================
+                # CRITICAL LINE: Render HTML safely
                 st.markdown(html_content, unsafe_allow_html=True)
 
                 # ---------- 2. DATA TABLE & CHART ----------
