@@ -419,183 +419,197 @@ elif choice == "🛡️ Admin Panel":
                 json_data = json.dumps(data, indent=4).encode('utf-8')
                 st.download_button("📥 Download JSON Backup", data=json_data, file_name="students_backup.json")
 
-# ---------- PAGE 3: STUDENT RESULT (100% COMMENT-FREE HTML) ----------
+# ---------- PAGE 3: STUDENT RESULT (FIXED PAGE RESET & PIC INTERFERENCE) ----------
 elif choice == "📋 Student Result":
+    
+    # --- SESSION STATE HOLDERS TO PREVENT DATA LOSS ON DOWNLOAD ---
+    if 'card_generated' not in st.session_state: st.session_state.card_generated = False
+    if 'current_roll' not in st.session_state: st.session_state.current_roll = None
+    if 'current_student_data' not in st.session_state: st.session_state.current_student_data = None
+    if 'temp_pic' not in st.session_state: st.session_state.temp_pic = None
+
     st.subheader("📋 Student Result Portal")
     with st.container():
         st.markdown("<div class='premium-glass-card'>", unsafe_allow_html=True)
-        roll = st.text_input("Enter your Roll Number", placeholder="e.g. 1001")
+        
+        # Pre-fill the roll number input with session state so it doesn't vanish
+        default_roll = st.session_state.current_roll if st.session_state.current_roll else ""
+        roll = st.text_input("Enter your Roll Number", value=default_roll, placeholder="e.g. 1001")
         
         if st.button("🔍 Generate Report"):
             if roll in data:
-                s = data[roll]
-                total = sum(s['marks'].values())
-                perc = (total/TOTAL_MARKS)*100
-                grade, gpa, _ = get_grade_gpa(perc)
-                
-                # --- PROFILE PICTURE SECTION (NO RESTART, SESSION STATE PREVIEW) ---
-                st.markdown("### 📸 Profile Picture")
-                
-                # Trick to store temporary image preview so it doesn't require app restart
-                if 'temp_pic' not in st.session_state:
-                    st.session_state.temp_pic = None
+                st.session_state.current_roll = roll
+                st.session_state.current_student_data = data[roll]
+                st.session_state.card_generated = True
+                st.rerun() # Lock the UI state so widgets don't reset
+            else:
+                st.markdown("<div class='alert-box error'>❌ Roll number not found!</div>", unsafe_allow_html=True)
+                st.session_state.card_generated = False
 
-                current_pic = s.get('profile_pic', None)
-                # If a new picture was just uploaded, show it instantly from session state
-                if st.session_state.temp_pic:
-                    current_pic = st.session_state.temp_pic
-                
-                col_pic1, col_pic2 = st.columns([1, 2])
-                with col_pic1:
-                    if current_pic:
-                        st.image(f"data:image/jpeg;base64,{current_pic}", width=150, caption="Current Photo")
-                
-                with col_pic2:
-                    img_file = st.camera_input("Take a picture (or upload below)")
-                    if img_file is None:
-                        img_file = st.file_uploader("Upload a photo instead", type=['jpg', 'jpeg', 'png'])
-                    
-                    if st.button("💾 Update Profile Picture"):
-                        if img_file is not None:
-                            import base64
-                            bytes_data = img_file.getvalue()
-                            base64_str = base64.b64encode(bytes_data).decode('utf-8')
-                            s['profile_pic'] = base64_str
-                            data[roll] = s
-                            save_data(data)
-                            # Store in session state for instant UI update without reloading
-                            st.session_state.temp_pic = base64_str
-                            # Show success message without restarting (st.rerun removed!)
-                            st.success("✅ Profile picture updated successfully! (Page did not restart)")
-                        else:
-                            st.warning("Please take or upload a picture first.")
-
-                # =====================================================================
-                # 1. PREMIUM HTML CANVA CARD BUILD (ALL COMMENTS REMOVED)
-                # =====================================================================
-                # Handle image embedding in HTML
-                img_html = ""
+        # ---------- DISPLAY CARD IF GENERATED (PREVENTS RESET ON PDF DOWNLOAD) ----------
+        if st.session_state.card_generated and st.session_state.current_student_data:
+            s = st.session_state.current_student_data
+            total = sum(s['marks'].values())
+            perc = (total/TOTAL_MARKS)*100
+            grade, gpa, _ = get_grade_gpa(perc)
+            
+            # --- PROFILE PICTURE SECTION (SMOOTH & STABLE) ---
+            st.markdown("### 📸 Profile Picture")
+            
+            current_pic = s.get('profile_pic', None)
+            # Instant preview update logic
+            if st.session_state.temp_pic:
+                current_pic = st.session_state.temp_pic
+            
+            col_pic1, col_pic2 = st.columns([1, 2])
+            with col_pic1:
                 if current_pic:
-                    img_html = f'<img src="data:image/jpeg;base64,{current_pic}" style="width:90px;height:90px;border-radius:50%;border:3px solid #7a4c34;position:absolute;top:20px;right:20px;z-index:2;object-fit:cover;" />'
+                    st.image(f"data:image/jpeg;base64,{current_pic}", width=150, caption="Current Photo")
+            
+            with col_pic2:
+                img_file = st.camera_input("Take a picture (or upload below)", key="pic_cam_1")
+                if img_file is None:
+                    img_file = st.file_uploader("Upload a photo instead", type=['jpg', 'jpeg', 'png'], key="pic_upload_1")
+                
+                if st.button("💾 Update Profile Picture"):
+                    if img_file is not None:
+                        import base64
+                        bytes_data = img_file.getvalue()
+                        base64_str = base64.b64encode(bytes_data).decode('utf-8')
+                        
+                        s['profile_pic'] = base64_str
+                        data[st.session_state.current_roll] = s
+                        save_data(data)
+                        
+                        # Update session state for instant UI update
+                        st.session_state.temp_pic = base64_str
+                        st.success("✅ Profile picture updated successfully! Page state preserved.")
+                        st.rerun() # Small rerun to refresh the image widget safely
+                    else:
+                        st.warning("Please take or upload a picture first.")
 
-                html_content = f"""
-                <div style="position: relative; background: #f5f0e6; border-radius: 20px; padding: 30px; margin-bottom: 20px; overflow: hidden; color: #333; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.2); min-height: 400px;">
-                    <div style="position: absolute; top: -30px; left: -20px; width: 140px; height: 140px; background: #e0d7c8; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
-                    <div style="position: absolute; top: -80px; right: -40px; width: 200px; height: 200px; background: #d4c8b6; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
-                    
-                    {img_html}
-                    
-                    <div style="position: relative; z-index: 1; background: #7a4c34; width: 100%; max-width: 280px; margin: 0 auto; border-radius: 12px; padding: 15px 0; text-align: center;">
-                        <h3 style="color: white; font-weight: 700; margin: 0;">Progress Report</h3>
-                    </div>
-                    <h5 style="position: relative; z-index: 1; color: #604227; text-align: center; margin-top: 10px; font-weight: 400;">Anderson Family Homeschool</h5>
+            # =====================================================================
+            # 1. PREMIUM HTML CANVA CARD BUILD (PERFECTLY ALIGNED)
+            # =====================================================================
+            img_html = ""
+            if current_pic:
+                img_html = f'<img src="data:image/jpeg;base64,{current_pic}" style="width:90px;height:90px;border-radius:50%;border:3px solid #7a4c34;position:absolute;top:20px;right:20px;z-index:2;object-fit:cover;" />'
 
-                    <div style="position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
-                        <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Student Name:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['name']}</div></div>
-                        <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">School Year:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{datetime.now().strftime('%Y-%m-%d')}</div></div>
-                        <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Grade:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['class']}</div></div>
-                        <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Teacher:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">Faculty (Auto-Generated)</div></div>
-                    </div>
+            html_content = f"""
+            <div style="position: relative; background: #f5f0e6; border-radius: 20px; padding: 30px; margin-bottom: 20px; overflow: hidden; color: #333; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(0,0,0,0.2); min-height: 400px;">
+                <div style="position: absolute; top: -30px; left: -20px; width: 140px; height: 140px; background: #e0d7c8; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
+                <div style="position: absolute; top: -80px; right: -40px; width: 200px; height: 200px; background: #d4c8b6; border-radius: 50%; z-index: 0; opacity: 0.8;"></div>
+                
+                {img_html}
+                
+                <div style="position: relative; z-index: 1; background: #7a4c34; width: 100%; max-width: 280px; margin: 0 auto; border-radius: 12px; padding: 15px 0; text-align: center;">
+                    <h3 style="color: white; font-weight: 700; margin: 0;">Progress Report</h3>
+                </div>
+                <h5 style="position: relative; z-index: 1; color: #604227; text-align: center; margin-top: 10px; font-weight: 400;">Anderson Family Homeschool</h5>
 
-                    <div style="position: relative; z-index: 1; margin-top: 25px;">
-                        <div style="background: #7a4c34; color: white; padding: 8px 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
-                            <span style="flex: 2;">Course Title</span>
-                            <span style="flex: 1; text-align: center;">No. of Units</span>
-                            <span style="flex: 1; text-align: center;">Course Grade</span>
-                            <span style="flex: 1.5; text-align: center;">Teacher's Remarks</span>
-                        </div>
-                        <div style="background: #f5f0e6; border: 1px solid #ccc; border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
-                """
-                for sub in SUBJECTS:
-                    mark = s['marks'].get(sub, 0)
-                    perc_sub = (mark/100)*100
-                    grade_sub, _, _ = get_grade_gpa(perc_sub)
-                    remark = "Excellent" if perc_sub>=90 else "Good" if perc_sub>=80 else "Satisfactory" if perc_sub>=70 else "Needs Improvement"
-                    html_content += f"""
-                            <div style="display: flex; justify-content: space-between; padding: 6px 15px; border-bottom: 1px solid #e0d7c8;">
-                                <span style="flex: 2; color: #c83c2f; font-weight: 500;">{sub}</span>
-                                <span style="flex: 1; text-align: center; color: #333;">1</span>
-                                <span style="flex: 1; text-align: center; color: #333;">{grade_sub}</span>
-                                <span style="flex: 1.5; text-align: center; color: #333;">{remark}</span>
-                            </div>
-                    """
-                html_content += """
-                        </div>
-                    </div>
+                <div style="position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                    <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Student Name:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['name']}</div></div>
+                    <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">School Year:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{datetime.now().strftime('%Y-%m-%d')}</div></div>
+                    <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Grade:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">{s['class']}</div></div>
+                    <div><label style="color: #c83c2f; font-weight: 700; font-size: 14px;">Teacher:</label><div style="border-bottom: 1px solid #777; padding: 5px 0; color: #444;">Faculty (Auto-Generated)</div></div>
+                </div>
 
-                    <div style="position: relative; z-index: 1; display: flex; margin-top: 20px; background: #eae2d7; border-radius: 8px;">
-                        <div style="background: #7a4c34; color: white; width: 90px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; border-top-left-radius: 8px; border-bottom-left-radius: 8px; text-align: center;">GRADING<br>KEY</div>
-                        <div style="flex: 1; padding: 10px 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 15px; font-size: 11px; color: #604227;">
-                            <div>A = 93% to 100% | 4.0/4.0</div><div>C- = 70% to 72% | 1.7/4.0</div>
-                            <div>A- = 90% to 92% | 3.7/4.0</div><div>D+ = 67% to 69% | 1.3/4.0</div>
-                            <div>B+ = 87% to 89% | 3.3/4.0</div><div>D  = 63% to 66% | 1.0/4.0</div>
-                            <div>B  = 83% to 86% | 3.0/4.0</div><div>D- = 60% to 62% | 0.7/4.0</div>
-                            <div>B- = 80% to 82% | 2.7/4.0</div><div>F  = 0% to 59% | 0.0/4.0</div>
-                            <div>C+ = 77% to 79% | 2.3/4.0</div><div>I  = Incomplete</div>
-                            <div>C  = 73% to 76% | 2.0/4.0</div><div></div>
-                        </div>
+                <div style="position: relative; z-index: 1; margin-top: 25px;">
+                    <div style="background: #7a4c34; color: white; padding: 8px 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
+                        <span style="flex: 2;">Course Title</span>
+                        <span style="flex: 1; text-align: center;">No. of Units</span>
+                        <span style="flex: 1; text-align: center;">Course Grade</span>
+                        <span style="flex: 1.5; text-align: center;">Teacher's Remarks</span>
                     </div>
-                """
+                    <div style="background: #f5f0e6; border: 1px solid #ccc; border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+            """
+            for sub in SUBJECTS:
+                mark = s['marks'].get(sub, 0)
+                perc_sub = (mark/100)*100
+                grade_sub, _, _ = get_grade_gpa(perc_sub)
+                remark = "Excellent" if perc_sub>=90 else "Good" if perc_sub>=80 else "Satisfactory" if perc_sub>=70 else "Needs Improvement"
                 html_content += f"""
-                    <div style="position: relative; z-index: 1; margin-top: 20px; display: flex; justify-content: space-between;">
-                        <span style="font-size: 12px; font-weight: bold; color: #604227;">Total: {total} / {TOTAL_MARKS} | Percentage: {perc:.1f}%</span>
-                        <span style="font-size: 12px; font-weight: bold; color: #c83c2f;">Letter Grade: {grade}</span>
+                        <div style="display: flex; justify-content: space-between; padding: 6px 15px; border-bottom: 1px solid #e0d7c8;">
+                            <span style="flex: 2; color: #c83c2f; font-weight: 500;">{sub}</span>
+                            <span style="flex: 1; text-align: center; color: #333;">1</span>
+                            <span style="flex: 1; text-align: center; color: #333;">{grade_sub}</span>
+                            <span style="flex: 1.5; text-align: center; color: #333;">{remark}</span>
+                        </div>
+                """
+            html_content += """
                     </div>
                 </div>
-                """
-                
-                # CRITICAL LINE: Render HTML safely
-                st.markdown(html_content, unsafe_allow_html=True)
 
-                # ---------- 2. DATA TABLE & CHART ----------
-                df = pd.DataFrame(list(s['marks'].items()), columns=["Subject", "Marks"])
-                df["Percentage"] = (df["Marks"]/100*100).round(1)
-                df["Grade"] = df["Percentage"].apply(lambda x: get_grade_gpa(x)[0])
-                
-                c1, c2 = st.columns([3, 2])
-                with c1:
-                    st.dataframe(df, use_container_width=True)
-                    st.metric("GPA (4.0 Scale)", gpa)
-                
-                with c2:
-                    if PLOTLY_AVAILABLE:
-                        try:
-                            fig = go.Figure(data=go.Scatterpolar(
-                                r=df["Marks"].tolist(),
-                                theta=df["Subject"].tolist(),
-                                fill='toself',
-                                line=dict(color='#c83c2f', width=2),
-                                marker=dict(color='#c83c2f')
-                            ))
-                            fig.update_layout(
-                                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-                                showlegend=False,
-                                margin=dict(l=20, r=20, t=20, b=20),
-                                paper_bgcolor='rgba(0,0,0,0)',
-                                plot_bgcolor='rgba(0,0,0,0)',
-                                font=dict(color=text_color)
-                            )
-                            st.plotly_chart(fig, use_container_width=True)
-                        except Exception:
-                            st.error("Radar chart rendering failed.")
-                    else:
-                        st.info("📊 Upgrade for interactive Radar Chart! Run `pip install plotly` in your terminal.")
-                
-                # ---------- 3. WEAKNESS ANALYZER ----------
-                st.markdown("### 🧠 Weakness Analyzer")
-                sorted_subjects = df.sort_values(by="Marks")
-                weak_subjects = sorted_subjects.head(2)
-                
-                st.markdown("<div class='alert-box info'>💡 Based on your scores, you should focus more on these subjects:</div>", unsafe_allow_html=True)
-                for idx, row in weak_subjects.iterrows():
-                    st.markdown(f"<div style='background: rgba(255, 255, 255, 0.05); padding: 5px 10px; border-left: 3px solid #e74c3c; margin-bottom: 5px; border-radius: 4px; color: {text_color};'>🔴 <b>{row['Subject']}</b> (Marks: {row['Marks']})</div>", unsafe_allow_html=True)
+                <div style="position: relative; z-index: 1; display: flex; margin-top: 20px; background: #eae2d7; border-radius: 8px;">
+                    <div style="background: #7a4c34; color: white; width: 90px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; border-top-left-radius: 8px; border-bottom-left-radius: 8px; text-align: center;">GRADING<br>KEY</div>
+                    <div style="flex: 1; padding: 10px 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 15px; font-size: 11px; color: #604227;">
+                        <div>A+ = 93% to 100% | 4.0/4.0</div><div>C- = 70% to 72% | 1.7/4.0</div>
+                        <div>A = 90% to 92% | 3.7/4.0</div><div>D+ = 67% to 69% | 1.3/4.0</div>
+                        <div>B+ = 87% to 89% | 3.3/4.0</div><div>D  = 63% to 66% | 1.0/4.0</div>
+                        <div>B  = 83% to 86% | 3.0/4.0</div><div>D- = 60% to 62% | 0.7/4.0</div>
+                        <div>B- = 80% to 82% | 2.7/4.0</div><div>F  = 0% to 59% | 0.0/4.0</div>
+                        <div>C+ = 77% to 79% | 2.3/4.0</div><div>I  = Incomplete</div>
+                        <div>C  = 73% to 76% | 2.0/4.0</div><div></div>
+                    </div>
+                </div>
+            """
+            html_content += f"""
+                <div style="position: relative; z-index: 1; margin-top: 20px; display: flex; justify-content: space-between;">
+                    <span style="font-size: 12px; font-weight: bold; color: #604227;">Total: {total} / {TOTAL_MARKS} | Percentage: {perc:.1f}%</span>
+                    <span style="font-size: 12px; font-weight: bold; color: #c83c2f;">Letter Grade: {grade}</span>
+                </div>
+            </div>
+            """
+            
+            # CRITICAL LINE: Render HTML safely
+            st.markdown(html_content, unsafe_allow_html=True)
 
-                # ---------- 4. PDF GENERATION WITH PROFILE PIC ----------
-                if st.button("📥 Download Official Progress Report (PDF)"):
-                    with st.spinner("Generating Premium PDF..."):
-                        pdf = generate_pdf_report(roll, s['name'], s['class'], s['marks'], str(datetime.now().date()), s.get('profile_pic', None))
-                        st.download_button("✅ Click to Download PDF", data=pdf, file_name=f"{s['name']}_{roll}_Report.pdf")
-                
-            else: 
-                st.markdown("<div class='alert-box error'>❌ Roll number not found!</div>", unsafe_allow_html=True)
+            # ---------- 2. DATA TABLE & CHART ----------
+            df = pd.DataFrame(list(s['marks'].items()), columns=["Subject", "Marks"])
+            df["Percentage"] = (df["Marks"]/100*100).round(1)
+            df["Grade"] = df["Percentage"].apply(lambda x: get_grade_gpa(x)[0])
+            
+            c1, c2 = st.columns([3, 2])
+            with c1:
+                st.dataframe(df, use_container_width=True)
+                st.metric("GPA (4.0 Scale)", gpa)
+            
+            with c2:
+                if PLOTLY_AVAILABLE:
+                    try:
+                        fig = go.Figure(data=go.Scatterpolar(
+                            r=df["Marks"].tolist(),
+                            theta=df["Subject"].tolist(),
+                            fill='toself',
+                            line=dict(color='#c83c2f', width=2),
+                            marker=dict(color='#c83c2f')
+                        ))
+                        fig.update_layout(
+                            polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                            showlegend=False,
+                            margin=dict(l=20, r=20, t=20, b=20),
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            font=dict(color=text_color)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception:
+                        st.error("Radar chart rendering failed.")
+                else:
+                    st.info("📊 Upgrade for interactive Radar Chart! Run `pip install plotly` in your terminal.")
+            
+            # ---------- 3. WEAKNESS ANALYZER ----------
+            st.markdown("### 🧠 Weakness Analyzer")
+            sorted_subjects = df.sort_values(by="Marks")
+            weak_subjects = sorted_subjects.head(2)
+            
+            st.markdown("<div class='alert-box info'>💡 Based on your scores, you should focus more on these subjects:</div>", unsafe_allow_html=True)
+            for idx, row in weak_subjects.iterrows():
+                st.markdown(f"<div style='background: rgba(255, 255, 255, 0.05); padding: 5px 10px; border-left: 3px solid #e74c3c; margin-bottom: 5px; border-radius: 4px; color: {text_color};'>🔴 <b>{row['Subject']}</b> (Marks: {row['Marks']})</div>", unsafe_allow_html=True)
+
+            # ---------- 4. PDF GENERATION WITH PROFILE PIC (NO PAGE RESET) ----------
+            if st.button("📥 Download Official Progress Report (PDF)"):
+                with st.spinner("Generating Premium PDF..."):
+                    pdf = generate_pdf_report(roll, s['name'], s['class'], s['marks'], str(datetime.now().date()), s.get('profile_pic', None))
+                    st.download_button("✅ Click to Confirm Download", data=pdf, file_name=f"{s['name']}_{roll}_Report.pdf")
         st.markdown("</div>", unsafe_allow_html=True)
